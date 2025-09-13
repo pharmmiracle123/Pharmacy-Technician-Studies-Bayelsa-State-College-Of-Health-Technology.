@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pharmacy Technician Results</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-blue-900 text-white py-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center px-6">
+      <h1 class="text-xl font-bold">📊 Pharmacy Technician Results Portal</h1>
+      <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-1 rounded text-sm">
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow container mx-auto px-6 py-10">
+    <!-- Motivational Section -->
+    <div class="bg-white shadow-lg rounded-lg p-6 text-center mb-8">
+      <h2 class="text-2xl font-semibold text-blue-900">🎓 Congratulations Students!</h2>
+      <p class="text-gray-600 mt-2">
+        Results are milestones, not destinations.  
+        Keep striving for excellence — your future is bright 🚀.
+      </p>
+    </div>
+
+    <!-- Results Access Section -->
+    <div class="bg-white shadow-lg rounded-lg p-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">📥 Access Your Results</h3>
+      <p class="text-gray-600 mb-6">
+        Select your semester below to view/download results.
+      </p>
+
+      <!-- Dynamic Results List -->
+      <div id="resultsContainer" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-blue-900 text-white text-center py-4">
+    <p class="text-sm">© 2025 Pharmacy Technician Studies | All Rights Reserved</p>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    // 👉 Add as many results as you want here
+    const results = [
+      { title: "Semester 1 Results (2025)", url: "https://your-link-1.com" },
+      { title: "Semester 2 Results (2025)", url: "https://your-link-2.com" }
+    ];
+
+    const container = document.getElementById("resultsContainer");
+
+    results.forEach(result => {
+      const link = document.createElement("a");
+      link.href = result.url;
+      link.target = "_blank";
+      link.className =
+        "block w-full bg-green-600 text-white px-6 py-3 rounded-lg shadow hover:bg-green-700 transition text-center font-semibold";
+      link.innerText = `🔗 ${result.title}`;
+      container.appendChild(link);
+    });
+
+    // Logout Function
+    function logout() {
+      alert("You have logged out.");
+      window.location.href = "results.html"; // back to login page
+    }
+  </script>
+
+</body>
+</html>

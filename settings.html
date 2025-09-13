@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Pharmacy Technician Studies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex" id="body">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">Pharmacy Tech</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">Dashboard</a></li>
+        <li><a href="students.html" class="block px-4 py-2 rounded hover:bg-blue-700">Students</a></li>
+        <li><a href="lecturers.html" class="block px-4 py-2 rounded hover:bg-blue-700">Lecturers</a></li>
+        <li><a href="courses.html" class="block px-4 py-2 rounded hover:bg-blue-700">Courses</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 bg-blue-700 rounded">Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+
+    <!-- Header -->
+    <header class="bg-white shadow rounded-lg p-6">
+      <h1 class="text-2xl font-bold text-blue-900">⚙️ Settings</h1>
+      <p class="text-gray-600">Manage your account preferences, privacy, and theme.</p>
+    </header>
+
+    <!-- Profile Settings -->
+    <section class="bg-white shadow rounded-lg p-6 space-y-4">
+      <h2 class="text-xl font-bold text-blue-900">👤 Profile Settings</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Full Name</label>
+          <input type="text" value="John Doe" class="mt-1 w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input type="email" value="john.doe@email.com" class="mt-1 w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+      </div>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save Changes</button>
+    </section>
+
+    <!-- Password Settings -->
+    <section class="bg-white shadow rounded-lg p-6 space-y-4">
+      <h2 class="text-xl font-bold text-blue-900">🔑 Change Password</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Current Password</label>
+          <input type="password" class="mt-1 w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">New Password</label>
+          <input type="password" class="mt-1 w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+      </div>
+      <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Update Password</button>
+    </section>
+
+    <!-- Theme Settings -->
+    <section class="bg-white shadow rounded-lg p-6 space-y-4">
+      <h2 class="text-xl font-bold text-blue-900">🎨 Theme</h2>
+      <div class="flex items-center gap-4">
+        <button id="lightMode" class="bg-gray-200 px-4 py-2 rounded">☀️ Light</button>
+        <button id="darkMode" class="bg-gray-800 text-white px-4 py-2 rounded">🌙 Dark</button>
+      </div>
+    </section>
+
+    <!-- Notifications -->
+    <section class="bg-white shadow rounded-lg p-6 space-y-4">
+      <h2 class="text-xl font-bold text-blue-900">🔔 Notifications</h2>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" checked>
+          <span>Email Notifications</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox">
+          <span>SMS Alerts</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" checked>
+          <span>App Notifications</span>
+        </label>
+      </div>
+      <button class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Save Preferences</button>
+    </section>
+
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Dark & Light Theme Toggle
+    const body = document.getElementById("body");
+    const lightMode = document.getElementById("lightMode");
+    const darkMode = document.getElementById("darkMode");
+
+    lightMode.addEventListener("click", () => {
+      body.classList.remove("bg-gray-900", "text-white");
+      body.classList.add("bg-gray-100", "text-black");
+    });
+
+    darkMode.addEventListener("click", () => {
+      body.classList.remove("bg-gray-100", "text-black");
+      body.classList.add("bg-gray-900", "text-white");
+    });
+  </script>
+
+</body>
+</html>

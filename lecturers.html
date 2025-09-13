@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecturers - Pharmacy Technician Studies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">Pharmacy Tech</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">Dashboard</a></li>
+        <li><a href="students.html" class="block px-4 py-2 rounded hover:bg-blue-700">Students</a></li>
+        <li><a href="lecturers.html" class="block px-4 py-2 bg-blue-700 rounded">Lecturers</a></li>
+        <li><a href="courses.html" class="block px-4 py-2 rounded hover:bg-blue-700">Courses</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+    
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">
+      <h1 class="text-xl font-bold text-blue-900">Lecturers</h1>
+      <div class="relative">
+        <input type="text" id="searchInput" placeholder="Search lecturer..." 
+               class="border rounded-lg px-4 py-2 w-60 focus:ring focus:ring-blue-400">
+      </div>
+    </header>
+
+    <!-- Announcements -->
+    <section class="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg">
+      <h2 class="font-bold text-yellow-800">📢 Department Announcements</h2>
+      <ul class="list-disc pl-6 text-sm text-gray-700 mt-2">
+        <li>Prof. Jane Smith will hold an extra Clinical Pharmacy class on <b>Friday at 2PM</b>.</li>
+        <li>Dr. Mike Johnson will be available for consultations every <b>Wednesday morning</b>.</li>
+        <li>All lecturers to upload course materials by <b>next week</b>.</li>
+      </ul>
+    </section>
+
+    <!-- Lecturers Grid -->
+    <section id="lecturerList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Lecturer Card -->
+      <div class="bg-white p-6 shadow rounded-lg lecturer-card" data-name="Dr. John Doe">
+        <img src="https://via.placeholder.com/100" alt="Lecturer" class="w-24 h-24 rounded-full mx-auto mb-4">
+        <h3 class="text-lg font-bold text-center text-blue-900">Dr. John Doe</h3>
+        <p class="text-center text-gray-600">Pharmacology</p>
+        <p class="text-center text-gray-500 text-sm">Email: johndoe@pharmtech.edu</p>
+        <p class="text-center text-green-600 font-semibold mt-2">🟢 Available Now</p>
+        <ul class="mt-3 text-sm text-gray-600">
+          <li>• Pharmacokinetics</li>
+          <li>• Drug Mechanisms</li>
+        </ul>
+        <div class="mt-4 space-y-2">
+          <a href="https://meet.google.com/johndoe" target="_blank" class="block text-center px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">Join Class</a>
+          <button onclick="openFeedback('Dr. John Doe')" class="block w-full px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Give Feedback</button>
+        </div>
+        <!-- Rating -->
+        <div class="flex justify-center mt-3 space-x-1 text-yellow-400">
+          ★★★★☆
+        </div>
+      </div>
+
+      <!-- Lecturer Card -->
+      <div class="bg-white p-6 shadow rounded-lg lecturer-card" data-name="Prof. Jane Smith">
+        <img src="https://via.placeholder.com/100" alt="Lecturer" class="w-24 h-24 rounded-full mx-auto mb-4">
+        <h3 class="text-lg font-bold text-center text-blue-900">Prof. Jane Smith</h3>
+        <p class="text-center text-gray-600">Clinical Pharmacy</p>
+        <p class="text-center text-gray-500 text-sm">Email: janesmith@pharmtech.edu</p>
+        <p class="text-center text-red-500 font-semibold mt-2">🔴 Offline</p>
+        <ul class="mt-3 text-sm text-gray-600">
+          <li>• Patient Counseling</li>
+          <li>• Prescription Review</li>
+        </ul>
+        <div class="mt-4 space-y-2">
+          <a href="https://zoom.us/janesmith" target="_blank" class="block text-center px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">Join Class</a>
+          <button onclick="openFeedback('Prof. Jane Smith')" class="block w-full px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Give Feedback</button>
+        </div>
+        <!-- Rating -->
+        <div class="flex justify-center mt-3 space-x-1 text-yellow-400">
+          ★★★★★
+        </div>
+      </div>
+
+      <!-- Lecturer Card -->
+      <div class="bg-white p-6 shadow rounded-lg lecturer-card" data-name="Dr. Mike Johnson">
+        <img src="https://via.placeholder.com/100" alt="Lecturer" class="w-24 h-24 rounded-full mx-auto mb-4">
+        <h3 class="text-lg font-bold text-center text-blue-900">Dr. Mike Johnson</h3>
+        <p class="text-center text-gray-600">Pharmaceutical Chemistry</p>
+        <p class="text-center text-gray-500 text-sm">Email: mikejohnson@pharmtech.edu</p>
+        <p class="text-center text-green-600 font-semibold mt-2">🟢 Available Now</p>
+        <ul class="mt-3 text-sm text-gray-600">
+          <li>• Medicinal Chemistry</li>
+          <li>• Organic Drug Compounds</li>
+        </ul>
+        <div class="mt-4 space-y-2">
+          <a href="https://meet.google.com/mikejohnson" target="_blank" class="block text-center px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">Join Class</a>
+          <button onclick="openFeedback('Dr. Mike Johnson')" class="block w-full px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Give Feedback</button>
+        </div>
+        <!-- Rating -->
+        <div class="flex justify-center mt-3 space-x-1 text-yellow-400">
+          ★★★☆☆
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white w-96 p-6 rounded-lg shadow-lg">
+      <h2 id="feedbackTitle" class="text-lg font-bold text-blue-900 mb-4">Feedback</h2>
+      <textarea id="feedbackText" rows="4" class="w-full border rounded-lg p-2 mb-4" placeholder="Write your feedback..."></textarea>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeFeedback()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+        <button onclick="submitFeedback()" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script>
+    // Search filter
+    const searchInput = document.getElementById("searchInput");
+    const lecturerCards = document.querySelectorAll(".lecturer-card");
+
+    searchInput.addEventListener("keyup", function() {
+      const value = this.value.toLowerCase();
+      lecturerCards.forEach(card => {
+        const name = card.getAttribute("data-name").toLowerCase();
+        card.style.display = name.includes(value) ? "block" : "none";
+      });
+    });
+
+    // Feedback modal
+    let currentLecturer = "";
+    function openFeedback(name) {
+      currentLecturer = name;
+      document.getElementById("feedbackTitle").innerText = `Feedback for ${name}`;
+      document.getElementById("feedbackModal").classList.remove("hidden");
+    }
+    function closeFeedback() {
+      document.getElementById("feedbackModal").classList.add("hidden");
+    }
+    function submitFeedback() {
+      const text = document.getElementById("feedbackText").value;
+      if (text.trim() === "") {
+        alert("Please enter feedback before submitting.");
+        return;
+      }
+      alert(`✅ Feedback for ${currentLecturer} submitted: ${text}`);
+      document.getElementById("feedbackText").value = "";
+      closeFeedback();
+    }
+  </script>
+
+</body>
+</html>

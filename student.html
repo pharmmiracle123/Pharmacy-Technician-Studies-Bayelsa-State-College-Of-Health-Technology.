@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Students - Pharmacy Technician Studies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">Pharmacy Tech</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">Dashboard</a></li>
+        <li><a href="students.html" class="block px-4 py-2 bg-blue-700 rounded">Students</a></li>
+        <li><a href="lecturers.html" class="block px-4 py-2 rounded hover:bg-blue-700">Lecturers</a></li>
+        <li><a href="courses.html" class="block px-4 py-2 rounded hover:bg-blue-700">Courses</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">
+      <h1 class="text-xl font-bold text-blue-900">Online Classes</h1>
+      <div class="relative">
+        <button onclick="toggleMenu()" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="6" r="1.5"/>
+            <circle cx="12" cy="12" r="1.5"/>
+            <circle cx="12" cy="18" r="1.5"/>
+          </svg>
+        </button>
+        <!-- Dropdown -->
+        <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2">
+          <a href="#" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
+          <a href="#" class="block px-4 py-2 hover:bg-gray-100">Settings</a>
+          <a href="#" class="block px-4 py-2 hover:bg-gray-100">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Announcements -->
+    <section class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded">
+      <h2 class="font-bold">📢 Announcement:</h2>
+      <p>Mid-Semester Exams start on <b>October 20, 2025</b>. Make sure you attend all online revision classes!</p>
+    </section>
+
+    <!-- Search Bar -->
+    <div class="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row justify-between items-center gap-4">
+      <input id="searchInput" type="text" placeholder="Search for a class..." class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">
+    </div>
+
+    <!-- Dynamic Courses Container -->
+    <div id="classesContainer" class="space-y-10"></div>
+
+  </div>
+
+  <!-- JS -->
+  <script>
+    // Sample course data
+    const courses = {
+      "100 Level": [
+        { title: "Biochemistry", desc: "Intro to biochemistry.", link: "https://meet.google.com/biochem100" },
+        { title: "Anatomy", desc: "Basic anatomy for pharmacy.", link: "https://zoom.us/anatomy100" },
+        { title: "Physiology", desc: "Understanding body systems.", link: "https://meet.google.com/physio100" }
+      ],
+      "200 Level": [
+        { title: "Pharmacology", desc: "Drug action fundamentals.", link: "https://meet.google.com/pharm200" },
+        { title: "Pathology", desc: "Disease mechanisms explained.", link: "https://zoom.us/pathology200" },
+        { title: "Pharmaceutics", desc: "Formulation science.", link: "https://meet.google.com/pharmaceutics200" }
+      ],
+      "300 Level": [
+        { title: "Clinical Pharmacy", desc: "Practical pharmacy practice.", link: "https://meet.google.com/clinical300" },
+        { title: "Pharmaceutical Chemistry", desc: "Drugs & structures.", link: "https://zoom.us/pharmchem300" },
+        { title: "Research Methods", desc: "Intro to research in pharmacy.", link: "https://meet.google.com/research300" }
+      ]
+    };
+
+    // Render function
+    function renderCourses(filter = "") {
+      const container = document.getElementById("classesContainer");
+      container.innerHTML = "";
+
+      Object.keys(courses).forEach(level => {
+        const filteredCourses = courses[level].filter(c => 
+          c.title.toLowerCase().includes(filter.toLowerCase())
+        );
+
+        if (filteredCourses.length > 0) {
+          let section = `
+            <section>
+              <h2 class="text-lg font-bold text-blue-900 mb-4">${level} Classes</h2>
+              <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          `;
+          filteredCourses.forEach(course => {
+            section += `
+              <div class="bg-white p-6 shadow rounded-lg hover:shadow-lg transition">
+                <h3 class="font-semibold text-gray-800">${course.title}</h3>
+                <p class="text-sm text-gray-500 mb-4">${course.desc}</p>
+                <a href="${course.link}" target="_blank" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">Join Class</a>
+              </div>
+            `;
+          });
+          section += "</div></section>";
+          container.innerHTML += section;
+        }
+      });
+    }
+
+    // Initial render
+    renderCourses();
+
+    // Search filter
+    document.getElementById("searchInput").addEventListener("keyup", function() {
+      renderCourses(this.value);
+    });
+
+    // Dropdown toggle
+    function toggleMenu() {
+      document.getElementById("dropdownMenu").classList.toggle("hidden");
+    }
+  </script>
+
+</body>
+</html>

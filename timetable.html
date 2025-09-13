@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timetable - Pharmacy Technician Studies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">Pharmacy Tech</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">Dashboard</a></li>
+        <li><a href="students.html" class="block px-4 py-2 rounded hover:bg-blue-700">Students</a></li>
+        <li><a href="lecturers.html" class="block px-4 py-2 rounded hover:bg-blue-700">Lecturers</a></li>
+        <li><a href="courses.html" class="block px-4 py-2 rounded hover:bg-blue-700">Courses</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 bg-blue-700 rounded">Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+
+    <!-- Header with Advice & Quote -->
+    <header class="bg-white shadow rounded-lg p-6 space-y-2">
+      <h1 class="text-2xl font-bold text-blue-900">Weekly Timetable</h1>
+      <p class="text-gray-700 italic">💡 *“Discipline is the bridge between goals and achievement.”* — Jim Rohn</p>
+      <p class="text-gray-600">Advice: Stay consistent, review daily, and take short breaks — your small efforts will build great results.</p>
+    </header>
+
+    <!-- Next Class + Study Tip -->
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div id="nextClass" class="bg-green-100 border-l-4 border-green-600 p-4 rounded shadow">
+        <h2 class="font-bold text-green-700">📅 Next Upcoming Class</h2>
+        <p class="text-gray-700 mt-1">Checking schedule...</p>
+      </div>
+      <div id="studyTip" class="bg-yellow-100 border-l-4 border-yellow-600 p-4 rounded shadow">
+        <h2 class="font-bold text-yellow-700">📖 Study Tip of the Day</h2>
+        <p class="text-gray-700 mt-1"></p>
+      </div>
+    </div>
+
+    <!-- Level Filter Buttons -->
+    <div class="flex flex-wrap gap-2 justify-center">
+      <button onclick="showLevel('100')" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">100 Level</button>
+      <button onclick="showLevel('200')" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">200 Level</button>
+      <button onclick="showLevel('300')" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">300 Level</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex flex-wrap gap-2 justify-end">
+      <button id="toggleView" class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-700">
+        Toggle Compact View
+      </button>
+      <button onclick="downloadTimetable()" class="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600">
+        📥 Download Timetable (PDF)
+      </button>
+    </div>
+
+    <!-- Timetable Sections -->
+    <section class="overflow-x-auto space-y-8">
+
+      <!-- 100 Level -->
+      <table id="table-100" class="min-w-full border-collapse bg-white shadow rounded-lg">
+        <thead>
+          <tr class="bg-blue-900 text-white">
+            <th class="p-3">Day</th><th class="p-3">8-10</th><th class="p-3">10-12</th><th class="p-3">12-2</th><th class="p-3">2-4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b"><td class="p-3 font-bold">Monday</td><td class="p-3">Intro to Pharmacy</td><td class="p-3">Biology</td><td class="p-3">Break</td><td class="p-3">Chemistry</td></tr>
+          <tr class="border-b bg-gray-50"><td class="p-3 font-bold">Tuesday</td><td class="p-3">Physics</td><td class="p-3">Anatomy</td><td class="p-3">Break</td><td class="p-3">Biochemistry</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 200 Level -->
+      <table id="table-200" class="hidden min-w-full border-collapse bg-white shadow rounded-lg">
+        <thead>
+          <tr class="bg-blue-900 text-white">
+            <th class="p-3">Day</th><th class="p-3">8-10</th><th class="p-3">10-12</th><th class="p-3">12-2</th><th class="p-3">2-4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b"><td class="p-3 font-bold">Monday</td><td class="p-3">Pharmacology</td><td class="p-3">Pathology</td><td class="p-3">Break</td><td class="p-3">Clinical Pharmacy</td></tr>
+          <tr class="border-b bg-gray-50"><td class="p-3 font-bold">Tuesday</td><td class="p-3">Pharmaceutics</td><td class="p-3">Microbiology</td><td class="p-3">Break</td><td class="p-3">Biostatistics</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 300 Level -->
+      <table id="table-300" class="hidden min-w-full border-collapse bg-white shadow rounded-lg">
+        <thead>
+          <tr class="bg-blue-900 text-white">
+            <th class="p-3">Day</th><th class="p-3">8-10</th><th class="p-3">10-12</th><th class="p-3">12-2</th><th class="p-3">2-4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b"><td class="p-3 font-bold">Monday</td><td class="p-3">Research Methods</td><td class="p-3">Clinical Pharmacy</td><td class="p-3">Break</td><td class="p-3">Pharmacy Practice</td></tr>
+          <tr class="border-b bg-gray-50"><td class="p-3 font-bold">Tuesday</td><td class="p-3">Pharmacognosy</td><td class="p-3">Toxicology</td><td class="p-3">Break</td><td class="p-3">Seminar</td></tr>
+        </tbody>
+      </table>
+
+    </section>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Toggle View
+    const toggleBtn = document.getElementById("toggleView");
+    let compact = false;
+
+    toggleBtn.addEventListener("click", () => {
+      compact = !compact;
+      document.querySelectorAll("td, th").forEach(cell => {
+        cell.classList.toggle("p-1", compact);
+        cell.classList.toggle("p-3", !compact);
+      });
+      toggleBtn.innerText = compact ? "Toggle Full View" : "Toggle Compact View";
+    });
+
+    // Download Timetable (as print)
+    function downloadTimetable() {
+      window.print();
+    }
+
+    // Study Tips
+    const tips = [
+      "Review your notes daily instead of cramming.",
+      "Teach a friend what you learned — it reinforces memory.",
+      "Stay hydrated to keep your brain sharp.",
+      "Use practice questions to test yourself.",
+      "Set mini goals before each study session."
+    ];
+    document.getElementById("studyTip").querySelector("p").innerText =
+      tips[Math.floor(Math.random() * tips.length)];
+
+    // Next Class (simulation for 100 level as default)
+    const schedule = {
+      "Monday": ["Intro to Pharmacy", "Biology", "Chemistry"],
+      "Tuesday": ["Physics", "Anatomy", "Biochemistry"]
+    };
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const now = new Date();
+    const today = days[now.getDay()];
+    const hour = now.getHours();
+    let nextClass = "No more classes today. ✅";
+
+    if(schedule[today]) {
+      if(hour < 8) nextClass = schedule[today][0] + " at 8:00 AM";
+      else if(hour < 10) nextClass = schedule[today][1] + " at 10:00 AM";
+      else if(hour < 14) nextClass = schedule[today][2] + " at 2:00 PM";
+    }
+    document.getElementById("nextClass").querySelector("p").innerText = nextClass;
+
+    // Show Level Filter
+    function showLevel(level) {
+      document.querySelectorAll("table").forEach(tbl => tbl.classList.add("hidden"));
+      document.getElementById("table-" + level).classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>

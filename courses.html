@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courses - Pharmacy Technician Studies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">PTS Department</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">Dashboard</a></li>
+        <li><a href="students.html" class="block px-4 py-2 rounded hover:bg-blue-700">Students</a></li>
+        <li><a href="lecturers.html" class="block px-4 py-2 rounded hover:bg-blue-700">Lecturers</a></li>
+        <li><a href="courses.html" class="block px-4 py-2 bg-blue-700 rounded">Courses</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-center bg-white shadow rounded-lg p-4 gap-4">
+      <h1 class="text-xl font-bold text-blue-900">Courses</h1>
+      <div class="flex space-x-2">
+        <input type="text" id="searchCourse" placeholder="Search courses..." 
+               class="border rounded-lg px-4 py-2 w-60 focus:ring focus:ring-blue-400">
+        <select id="filterLevel" class="border rounded-lg px-3 py-2">
+          <option value="all">All Levels</option>
+          <option value="100">100 Level</option>
+          <option value="200">200 Level</option>
+          <option value="300">300 Level</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Courses Grid -->
+    <section id="coursesGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Course Card -->
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Biochemistry" data-level="100">
+        <h3 class="text-lg font-bold text-blue-900">Biochemistry</h3>
+        <p class="text-sm text-gray-600 mb-1">100 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#DrJohnDoe" class="text-blue-700 hover:underline">Dr. John Doe</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Covers biomolecules, enzymes, and metabolic pathways relevant to pharmacy.</p>
+          <a href="materials/biochemistry.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Anatomy" data-level="100">
+        <h3 class="text-lg font-bold text-blue-900">Anatomy</h3>
+        <p class="text-sm text-gray-600 mb-1">100 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#ProfJaneSmith" class="text-blue-700 hover:underline">Prof. Jane Smith</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Introduction to human anatomy with emphasis on systems relevant to pharmacy.</p>
+          <a href="materials/anatomy.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Pharmacology" data-level="200">
+        <h3 class="text-lg font-bold text-blue-900">Pharmacology</h3>
+        <p class="text-sm text-gray-600 mb-1">200 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#DrMikeJohnson" class="text-blue-700 hover:underline">Dr. Mike Johnson</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Study of drug actions, interactions, and therapeutic applications.</p>
+          <a href="materials/pharmacology.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Pathology" data-level="200">
+        <h3 class="text-lg font-bold text-blue-900">Pathology</h3>
+        <p class="text-sm text-gray-600 mb-1">200 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#ProfJaneSmith" class="text-blue-700 hover:underline">Prof. Jane Smith</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Introduction to diseases, their causes, and their effects on body systems.</p>
+          <a href="materials/pathology.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Clinical Pharmacy" data-level="300">
+        <h3 class="text-lg font-bold text-blue-900">Clinical Pharmacy</h3>
+        <p class="text-sm text-gray-600 mb-1">300 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#DrJohnDoe" class="text-blue-700 hover:underline">Dr. John Doe</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Focuses on patient care, drug therapy monitoring, and hospital pharmacy practice.</p>
+          <a href="materials/clinical_pharmacy.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 shadow rounded-lg course-card" data-name="Pharmaceutical Chemistry" data-level="300">
+        <h3 class="text-lg font-bold text-blue-900">Pharmaceutical Chemistry</h3>
+        <p class="text-sm text-gray-600 mb-1">300 Level</p>
+        <p class="text-sm text-gray-700 mb-2">Lecturer: 
+          <a href="lecturers.html#DrMikeJohnson" class="text-blue-700 hover:underline">Dr. Mike Johnson</a>
+        </p>
+        <button onclick="toggleDetails(this)" class="text-blue-700 hover:underline">View Details</button>
+        <div class="hidden mt-3 space-y-2 course-details">
+          <p class="text-gray-500 text-sm">Explores drug design, synthesis, and chemical properties of pharmaceuticals.</p>
+          <a href="materials/pharm_chemistry.pdf" download 
+             class="block px-3 py-2 bg-blue-900 text-white rounded hover:bg-blue-700 text-center">
+             Download Materials
+          </a>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Toggle course details
+    function toggleDetails(button) {
+      const details = button.nextElementSibling;
+      details.classList.toggle("hidden");
+    }
+
+    // Search & filter
+    const searchCourse = document.getElementById("searchCourse");
+    const filterLevel = document.getElementById("filterLevel");
+    const courseCards = document.querySelectorAll(".course-card");
+
+    function filterCourses() {
+      const searchValue = searchCourse.value.toLowerCase();
+      const levelValue = filterLevel.value;
+
+      courseCards.forEach(card => {
+        const name = card.getAttribute("data-name").toLowerCase();
+        const level = card.getAttribute("data-level");
+        const matchesSearch = name.includes(searchValue);
+        const matchesLevel = levelValue === "all" || level === levelValue;
+
+        card.style.display = (matchesSearch && matchesLevel) ? "block" : "none";
+      });
+    }
+
+    searchCourse.addEventListener("keyup", filterCourses);
+    filterLevel.addEventListener("change", filterCourses);
+  </script>
+
+</body>
+</html>

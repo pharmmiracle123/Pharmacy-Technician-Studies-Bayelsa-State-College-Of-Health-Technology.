@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">    
+<head>    
+  <meta charset="UTF-8">    
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+  <title>Pharmacy Technician Studies Dashboard</title>    
+  <script src="https://cdn.tailwindcss.com"></script>    
+</head>    
+<body class="bg-gray-100 flex">    
+
+  <!-- Sidebar -->    
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">    
+    <h2 class="text-2xl font-bold mb-8 text-center">PTS Department</h2>    
+    <nav>    
+      <ul class="space-y-4">    
+        <li><a href="index.html" class="block px-4 py-2 bg-blue-700 rounded">Dashboard</a></li>    
+        <li><a href="student.html" class="block px-4 py-2 rounded hover:bg-blue-700">Students</a></li>    
+        <li><a href="lecturers.html" class="block px-4 py-2 rounded hover:bg-blue-700">Lecturers</a></li>    
+        <li><a href="courses.html" class="block px-4 py-2 rounded hover:bg-blue-700">Courses</a></li>    
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">Timetable</a></li>    
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">Results</a></li>    
+        <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-700">Resources</a></li>    
+        <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-700">Settings</a></li>    
+      </ul>    
+    </nav>    
+  </aside>    
+
+  <!-- Main Content -->    
+  <div class="flex-1 p-6 space-y-8">  
+
+    <!-- Header -->    
+    <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">    
+      <h1 class="text-xl font-bold text-blue-900">Dashboard</h1>    
+
+      <div class="flex items-center space-x-4">    
+        <input type="text" placeholder="Search..." class="px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">    
+
+        <!-- 3 Dot Menu -->    
+        <div class="relative">    
+          <button onclick="toggleMenu()" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none">    
+            <!-- 3-dot icon -->    
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">    
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6h.01M12 12h.01M12 18h.01"/>    
+            </svg>    
+          </button>    
+
+          <!-- Dropdown (falls to the left) -->    
+          <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2 transform -translate-x-12">    
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100">Profile</a>    
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100">Settings</a>    
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100">Logout</a>    
+          </div>    
+        </div>    
+      </div>    
+    </header>    
+
+    <!-- Hero / Welcome Section -->    
+    <section class="bg-gradient-to-r from-blue-900 to-blue-600 text-white rounded-lg p-8 shadow">    
+      <h2 class="text-2xl font-bold mb-2">Welcome to the Department of Pharmacy Technician Studies</h2>    
+      <p class="max-w-3xl">    
+        Our department is dedicated to training competent pharmacy technicians with strong knowledge in pharmacology, dispensing, and patient care.    
+        We combine classroom learning with practical exposure to prepare our students for excellence in healthcare delivery.    
+      </p>    
+    </section>    
+
+    <!-- Stats Cards -->    
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+        <h3 class="text-lg font-semibold text-blue-900">Students</h3>    
+        <p class="text-3xl font-bold mt-2">530</p>    
+        <span class="text-sm text-gray-500">Enrolled this session</span>    
+      </div>    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+        <h3 class="text-lg font-semibold text-blue-900">Lecturers</h3>    
+        <p class="text-3xl font-bold mt-2">25</p>    
+        <span class="text-sm text-gray-500">Active faculty</span>    
+      </div>    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+        <h3 class="text-lg font-semibold text-blue-900">Courses</h3>    
+        <p class="text-3xl font-bold mt-2">32</p>    
+        <span class="text-sm text-gray-500">This semester</span>    
+      </div>    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+        <h3 class="text-lg font-semibold text-blue-900">Upcoming Exams</h3>    
+        <p class="text-3xl font-bold mt-2">Oct 2025</p>    
+        <span class="text-sm text-gray-500">Semester exams</span>    
+      </div>    
+    </section>    
+
+    <!-- Department Overview -->    
+    <section class="bg-white rounded-lg shadow p-6">    
+      <h2 class="text-lg font-bold text-blue-900 mb-4">About the Department</h2>    
+      <p class="mb-4">    
+        The Pharmacy Technician Studies Department at Bayelsa State College of Health Technology is committed to developing skilled healthcare professionals    
+        who can support pharmacists and provide safe, effective, and ethical patient care. Our curriculum blends core pharmaceutical sciences with    
+        practical hands-on training.    
+      </p>    
+      <p class="mb-4">    
+        Students are equipped with knowledge in pharmacology, drug dispensing, medical ethics, and hospital/community pharmacy operations.    
+        We emphasize professionalism, research, and innovation in pharmacy practice.    
+      </p>    
+      <p>    
+        Graduates of the program are eligible for professional certification and are well-prepared to work in hospitals, community pharmacies,    
+        NGOs, and research institutions both locally and internationally.    
+      </p>    
+    </section>    
+
+    <!-- Announcements + Timetable + Quick Links -->    
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">    
+      <!-- Announcements -->    
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+        <h2 class="text-lg font-bold text-blue-900 mb-4">Latest Announcements</h2>    
+        <ul class="space-y-3">    
+          <li class="p-3 bg-blue-50 rounded">📢 Orientation for new students – Sept 20</li>    
+          <li class="p-3 bg-blue-50 rounded">📢 Lecture-free day – Independence Day</li>    
+          <li class="p-3 bg-blue-50 rounded">📢 Exam clearance starts Oct 1</li>    
+        </ul>    
+      </div>    
+
+      <!-- Timetable -->    
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+        <h2 class="text-lg font-bold text-blue-900 mb-4">Upcoming Timetable</h2>    
+        <table class="w-full border text-sm">    
+          <thead>    
+            <tr class="bg-blue-900 text-white">    
+              <th class="p-2">Date</th>    
+              <th class="p-2">Course</th>    
+              <th class="p-2">Lecturer</th>    
+            </tr>    
+          </thead>    
+          <tbody>    
+            <tr class="border-t">    
+              <td class="p-2">Sept 15</td>    
+              <td class="p-2">Pharmacology I</td>    
+              <td class="p-2">Dr. Okoro</td>    
+            </tr>    
+            <tr class="border-t">    
+              <td class="p-2">Sept 18</td>    
+              <td class="p-2">Anatomy & Physiology</td>    
+              <td class="p-2">Mr. John</td>    
+            </tr>    
+            <tr class="border-t">    
+              <td class="p-2">Sept 22</td>    
+              <td class="p-2">Dispensing Practice</td>    
+              <td class="p-2">Mrs. Ebi</td>    
+            </tr>    
+          </tbody>    
+        </table>    
+      </div>    
+
+      <!-- Quick Links -->    
+      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+        <h2 class="text-lg font-bold text-blue-900 mb-4">Quick Links</h2>    
+        <div class="flex flex-col space-y-3">    
+          <a href="#" class="px-4 py-2 bg-blue-100 rounded hover:bg-blue-200">📘 Student Handbook</a>    
+          <a href="#" class="px-4 py-2 bg-blue-100 rounded hover:bg-blue-200">📅 Academic Calendar</a>    
+          <a href="#" class="px-4 py-2 bg-blue-100 rounded hover:bg-blue-200">📝 Results Portal</a>    
+          <a href="#" class="px-4 py-2 bg-blue-100 rounded hover:bg-blue-200">📂 Past Questions</a>    
+        </div>    
+      </div>    
+    </section>  
+
+  </div>    
+
+  <!-- JS for Dropdown -->    
+  <script>    
+    function toggleMenu() {    
+      document.getElementById("dropdownMenu").classList.toggle("hidden");    
+    }    
+    
+
+  </script>  
+
+</body>    
+</html>
