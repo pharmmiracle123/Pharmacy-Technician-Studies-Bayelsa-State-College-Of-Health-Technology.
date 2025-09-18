@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTS Accreditation Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">PTS Dept.</h2>
+     <nav>
+     <ul class="space-y-4">
+       <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">🏠 Dashboard</a></li>
+       <li><a href="calendar.html" class="block px-4 py-2 bg-blue-700 rounded">📅 Academic Calendar</a></li>
+       <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">📖 Timetable</a></li>
+       <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">📝 Results</a></li>
+       <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">📂 Resources</a></li>
+       <li><a href="Accreditation.html" class="block px-4 py-2 bg-blue-700 rounded">✔️ PTS Accreditation</a></li>
+     
+       <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">⚙ Settings</a></li>
+     </ul>
+   </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+    
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">
+      <h1 class="text-xl font-bold text-blue-900">Accreditation Dashboard</h1>
+      <button onclick="downloadReport()" class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">
+        ⬇ Download Word Report
+      </button>
+    </header>
+
+    <!-- Accreditation Overview -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-green-100 border-l-4 border-green-600 p-6 rounded-lg shadow">
+        <h2 class="text-lg font-bold text-green-700">PCN Accreditation</h2>
+        <p class="text-gray-700 mt-2">✅ Fully Accredited by Pharmacists Council of Nigeria (PCN).</p>
+        <p class="text-sm text-gray-600 mt-2">Covers curriculum, professional ethics, and clinical training.</p>
+      </div>
+      
+      <div class="bg-yellow-100 border-l-4 border-yellow-600 p-6 rounded-lg shadow">
+        <h2 class="text-lg font-bold text-yellow-700">NBTE Accreditation</h2>
+        <p class="text-gray-700 mt-2">✅ Accredited by National Board for Technical Education (NBTE).</p>
+        <p class="text-sm text-gray-600 mt-2">Covers academic structure, staffing, facilities, and student support.</p>
+      </div>
+    </section>
+
+    <!-- Accredited Components -->
+    <section class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-blue-900 mb-4">What Has Been Accredited ✅</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">📘 Curriculum (Year 1 – Year 3)</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">👨‍🏫 Qualified Lecturers</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">🏫 Lecture Halls & Classrooms</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">🔬 Science & Pharmacy Labs</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">📖 Departmental Library</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">💻 ICT Facilities & E-learning</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">📝 Continuous Assessments (CA)</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">🏥 SIWES (Clinical/Industrial Training)</div>
+        <div class="p-4 bg-gray-50 border rounded-lg shadow-sm">🏫 Staff Office</div>
+      </div>
+    </section>
+
+    <!-- Progress Tracker -->
+    <section class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-blue-900 mb-4">Accreditation Progress</h2>
+      <div class="mb-4">
+        <p class="text-sm text-gray-600">PCN Accreditation 100%</p>
+        <div class="w-full bg-gray-200 rounded-full h-4">
+          <div class="bg-green-600 h-4 rounded-full" style="width: 100%"></div>
+        </div>
+      </div>
+      <div class="mb-4">
+        <p class="text-sm text-gray-600">NBTE Accreditation (Soon to be accredited)</p>
+        <div class="w-full bg-gray-200 rounded-full h-4">
+          <div class="bg-yellow-600 h-4 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Script to download Word file -->
+  <script>
+    function downloadReport() {
+      const content = `
+PTS DEPARTMENT - ACCREDITATION REPORT (2025/2026)
+
+1. PCN Accreditation:
+✅ Fully Accredited by Pharmacists Council of Nigeria (PCN).
+- Covers curriculum, professional ethics, and clinical training.
+
+2. NBTE Accreditation:
+✅ Accredited by National Board for Technical Education (NBTE).
+- Covers academic structure, staffing, facilities, and student support.
+
+3. Accredited Components:
+- 📘 Curriculum (Year 1 – Year 3)
+- 👨‍🏫 Qualified Lecturers
+- 🏫 Lecture Halls & Classrooms
+- 🔬 Science & Pharmacy Labs
+- 📖 Departmental Library
+- 💻 ICT Facilities & E-learning
+- 📝 Continuous Assessments (CA)
+- 🏥 SIWES (Clinical/Industrial Training)
+- 🎓 Student Welfare & Support
+
+Prepared by:  
+Pharm. A. T. Gilbert  
+Head of Department (PTS)
+`;
+
+      const blob = new Blob([content], { type: "application/msword" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "PTS_Accreditation_Report.doc";
+      link.click();
+    }
+  </script>
+
+</body>
+             </html>
