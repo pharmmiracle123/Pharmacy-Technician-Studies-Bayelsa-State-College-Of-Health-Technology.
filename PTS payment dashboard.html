@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PTS Payment Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex transition-all duration-300">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 bg-blue-900 text-white min-h-screen p-6 dark:bg-gray-800 hidden md:block">
+    <h2 class="text-2xl font-bold mb-8 text-center">PTS Payments</h2>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="#" onclick="showSection('dashboard')" class="block px-4 py-2 rounded hover:bg-blue-700">🏠 Dashboard</a></li>
+        <li><a href="#" onclick="showSection('payment')" class="block px-4 py-2 rounded hover:bg-blue-700">💳 Make Payment</a></li>
+        <li><a href="#" onclick="showSection('history')" class="block px-4 py-2 rounded hover:bg-blue-700">📜 Payment History</a></li>
+        <li><a href="#" onclick="showSection('profile')" class="block px-4 py-2 rounded hover:bg-blue-700">👤 Student Profile</a></li>
+        <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-700">⚙ Settings</a></li>
+      </ul>
+    </nav>
+    <button onclick="toggleDarkMode()" 
+      class="mt-10 w-full bg-gray-700 text-white py-2 rounded hover:bg-gray-600">
+      🌙 Toggle Dark Mode
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-6 space-y-8">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+      <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
+      <button onclick="toggleSidebar()" class="md:hidden px-4 py-2 bg-blue-700 text-white rounded">
+        ☰ Menu
+      </button>
+    </header>
+
+    <!-- Notifications -->
+    <section id="notificationSection" class="bg-yellow-100 text-yellow-900 p-4 rounded-lg hidden">
+      <p id="notificationMsg">🔔 Notification message will appear here.</p>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboardSection" class="space-y-6">
+      <h2 class="text-lg font-bold text-blue-900 dark:text-white">📊 Payment Summary</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+          <h3 class="text-sm font-semibold text-gray-500">Total Payments</h3>
+          <p id="totalPayments" class="text-2xl font-bold text-blue-700">₦0</p>
+        </div>
+        <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+          <h3 class="text-sm font-semibold text-gray-500">Department Fees</h3>
+          <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
+        </div>
+        <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+          <h3 class="text-sm font-semibold text-gray-500">School Fees</h3>
+          <p id="totalSchool" class="text-2xl font-bold text-purple-700">₦0</p>
+        </div>
+      </div>
+
+      <!-- Analytics Chart -->
+      <canvas id="paymentChart" class="bg-white dark:bg-gray-800 shadow rounded-lg p-4"></canvas>
+    </section>
+
+    <!-- Payment Section -->
+    <section id="paymentSection" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 hidden">
+      <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
+      <div class="flex gap-4 mb-6">
+        <button onclick="showForm('dept')" id="btnDept" class="px-4 py-2 bg-blue-700 text-white rounded">Department Fee</button>
+        <button onclick="showForm('school')" id="btnSchool" class="px-4 py-2 bg-gray-200 text-blue-900 dark:bg-gray-700 dark:text-white rounded">School Fee</button>
+      </div>
+
+      <!-- Forms -->
+      <form id="deptForm" class="space-y-4">
+        <input type="text" id="deptName" placeholder="Full Name" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+        <input type="text" id="deptMatric" placeholder="Matric Number" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+        <select id="deptYear" onchange="setDeptFee()" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white">
+          <option value="">-- Select Year --</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option>
+        </select>
+        <input type="number" id="deptAmount" placeholder="Amount" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" readonly>
+        <button type="button" onclick="payDepartmentFee()" class="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800">Pay Department Fee</button>
+      </form>
+
+      <form id="schoolForm" class="space-y-4 hidden">
+        <input type="text" id="schoolName" placeholder="Full Name" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+        <input type="text" id="schoolMatric" placeholder="Matric Number" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+        <select id="schoolYear" onchange="setSchoolFee()" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white">
+          <option value="">-- Select Year --</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option>
+        </select>
+        <input type="number" id="schoolAmount" placeholder="Amount" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" readonly>
+        <button type="button" onclick="paySchoolFee()" class="w-full bg-green-700 text-white py-2 rounded hover:bg-green-800">Pay School Fee</button>
+      </form>
+    </section>
+
+    <!-- History -->
+    <section id="historySection" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+      <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">📜 Payment History</h2>
+      <div class="mb-4 flex justify-between">
+        <input type="text" id="searchHistory" onkeyup="filterHistory()" placeholder="🔍 Search by Name, Matric, or Year" class="border rounded px-3 py-2 w-2/3 dark:bg-gray-700 dark:text-white">
+        <button onclick="downloadHistory()" class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">⬇ Export</button>
+      </div>
+      <table class="w-full border-collapse border border-gray-300 dark:border-gray-700">
+        <thead>
+          <tr class="bg-gray-200 dark:bg-gray-700"><th class="p-2 border">Name</th><th class="p-2 border">Matric</th><th class="p-2 border">Year</th><th class="p-2 border">Fee Type</th><th class="p-2 border">Amount</th><th class="p-2 border">Date</th></tr>
+        </thead>
+        <tbody id="historyTable" class="text-sm"></tbody>
+      </table>
+    </section>
+
+    <!-- Profile Section -->
+    <section id="profileSection" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+      <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">👤 Student Profile</h2>
+      <form class="space-y-4">
+        <input type="text" id="profileName" placeholder="Full Name" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white">
+        <input type="text" id="profileMatric" placeholder="Matric Number" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white">
+        <input type="email" id="profileEmail" placeholder="Email Address" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-white">
+        <button type="button" onclick="saveProfile()" class="w-full bg-purple-700 text-white py-2 rounded hover:bg-purple-800">Save Profile</button>
+      </form>
+    </section>
+
+    <!-- Receipt -->
+    <section id="receiptSection" class="hidden bg-green-50 dark:bg-gray-700 border border-green-300 rounded-lg p-6">
+      <h3 class="text-lg font-bold text-green-800 dark:text-green-300 mb-3">✅ Payment Successful</h3>
+      <pre id="receiptDetails" class="text-sm text-gray-700 dark:text-gray-200 mb-3 whitespace-pre-line"></pre>
+      <button onclick="downloadReceipt()" class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">⬇ Download Receipt</button>
+    </section>
+  </div>
+
+  <script>
+    const deptFees = {1: 5000, 2: 7000, 3: 9000};
+    const schoolFees = {1: 25000, 2: 30000, 3: 35000};
+    let history = JSON.parse(localStorage.getItem("paymentHistory")) || [];
+
+    function showSection(section) {
+      ["dashboard","payment","history","profile"].forEach(s => document.getElementById(s+"Section").classList.add("hidden"));
+      document.getElementById(section+"Section").classList.remove("hidden");
+      updateSummary(); renderChart();
+    }
+    function showForm(type){document.getElementById("deptForm").classList.toggle("hidden",type!=="dept");document.getElementById("schoolForm").classList.toggle("hidden",type!=="school");}
+    function setDeptFee(){document.getElementById("deptAmount").value = deptFees[document.getElementById("deptYear").value] || "";}
+    function setSchoolFee(){document.getElementById("schoolAmount").value = schoolFees[document.getElementById("schoolYear").value] || "";}
+    function payDepartmentFee(){handlePayment("Department Fee","deptName","deptMatric","deptYear","deptAmount");}
+    function paySchoolFee(){handlePayment("School Fee","schoolName","schoolMatric","schoolYear","schoolAmount");}
+    function handlePayment(type,nField,mField,yField,aField){
+      const name=document.getElementById(nField).value,matric=document.getElementById(mField).value,year=document.getElementById(yField).value,amount=document.getElementById(aField).value;
+      if(!name||!matric||!year||!amount) return alert("⚠ Please fill all fields.");
+      const date=new Date().toLocaleString();addHistory(name,matric,year,type,amount,date);
+      showReceipt(`${type.toUpperCase()} RECEIPT\n\nName: ${name}\nMatric: ${matric}\nYear: ${year}\nAmount Paid: ₦${amount}\nDate: ${date}`);
+      notify("✅ Payment successful for "+type+"!");
+    }
+    function addHistory(name,matric,year,feeType,amount,date){history.push({name,matric,year,feeType,amount,date});localStorage.setItem("paymentHistory",JSON.stringify(history));renderHistory();updateSummary();}
+    function renderHistory(){document.getElementById("historyTable").innerHTML=history.map(h=>`<tr><td class="border p-2">${h.name}</td><td class="border p-2">${h.matric}</td><td class="border p-2">${h.year}</td><td class="border p-2">${h.feeType}</td><td class="border p-2">₦${h.amount}</td><td class="border p-2">${h.date}</td></tr>`).join("");}
+    function filterHistory(){const q=document.getElementById("searchHistory").value.toLowerCase();document.getElementById("historyTable").innerHTML=history.filter(h=>h.name.toLowerCase().includes(q)||h.matric.toLowerCase().includes(q)||h.year.includes(q)).map(h=>`<tr><td class="border p-2">${h.name}</td><td class="border p-2">${h.matric}</td><td class="border p-2">${h.year}</td><td class="border p-2">${h.feeType}</td><td class="border p-2">₦${h.amount}</td><td class="border p-2">${h.date}</td></tr>`).join("");}
+    function updateSummary(){let total=0,dept=0,school=0;history.forEach(h=>{total+=parseInt(h.amount);if(h.feeType.includes("Department"))dept+=parseInt(h.amount);if(h.feeType.includes("School"))school+=parseInt(h.amount);});document.getElementById("totalPayments").innerText="₦"+total.toLocaleString();document.getElementById("totalDept").innerText="₦"+dept.toLocaleString();document.getElementById("totalSchool").innerText="₦"+school.toLocaleString();}
+    function showReceipt(content){document.getElementById("receiptDetails").innerText=content;document.getElementById("receiptSection").classList.remove("hidden");}
+    function downloadReceipt(){const b=new Blob([document.getElementById("receiptDetails").innerText],{type:"application/msword"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="PTS_Receipt.doc";l.click();}
+    function downloadHistory(){let c="PTS Payment History\n\n";history.forEach(h=>{c+=`${h.name} | ${h.matric} | Year: ${h.year} | ${h.feeType} | ₦${h.amount} | ${h.date}\n`;});const b=new Blob([c],{type:"application/msword"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="PTS_Payment_History.doc";l.click();}
+    function saveProfile(){localStorage.setItem("studentProfile",JSON.stringify({name:profileName.value,matric:profileMatric.value,email:profileEmail.value}));notify("✅ Profile saved successfully!");}
+    function notify(msg){document.getElementById("notificationMsg").innerText=msg;document.getElementById("notificationSection").classList.remove("hidden");setTimeout(()=>document.getElementById("notificationSection").classList.add("hidden"),4000);}
+    function toggleDarkMode(){document.body.classList.toggle("dark");}
+    function toggleSidebar(){document.getElementById("sidebar").classList.toggle("hidden");}
+    function renderChart(){const ctx=document.getElementById("paymentChart").getContext("2d");if(window.myChart)window.myChart.destroy();window.myChart=new Chart(ctx,{type:"doughnut",data:{labels:["Department Fees","School Fees"],datasets:[{data:[history.filter(h=>h.feeType.includes("Department")).reduce((a,c)=>a+parseInt(c.amount),0),history.filter(h=>h.feeType.includes("School")).reduce((a,c)=>a+parseInt(c.amount),0)],backgroundColor:["#34d399","#8b5cf6"]}]}});}
+    renderHistory();updateSummary();renderChart();
+  </script>
+</body>
+</html>
