@@ -6,6 +6,14 @@
   <title>PTS Payment Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- 🔒 Access Control -->
+  <script>
+    if (localStorage.getItem("PTS_Access") !== "granted") {
+      alert("⚠ You must go through Payment Access first!");
+      window.location.href = "Payment Access.html";
+    }
+  </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex transition-all duration-300">
 
@@ -159,11 +167,12 @@
     function downloadReceipt(){const b=new Blob([document.getElementById("receiptDetails").innerText],{type:"application/msword"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="PTS_Receipt.doc";l.click();}
     function downloadHistory(){let c="PTS Payment History\n\n";history.forEach(h=>{c+=`${h.name} | ${h.matric} | Year: ${h.year} | ${h.feeType} | ₦${h.amount} | ${h.date}\n`;});const b=new Blob([c],{type:"application/msword"}),l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="PTS_Payment_History.doc";l.click();}
     function saveProfile(){localStorage.setItem("studentProfile",JSON.stringify({name:profileName.value,matric:profileMatric.value,email:profileEmail.value}));notify("✅ Profile saved successfully!");}
+    function loadProfile(){const p=JSON.parse(localStorage.getItem("studentProfile"));if(p){profileName.value=p.name;profileMatric.value=p.matric;profileEmail.value=p.email;}}
     function notify(msg){document.getElementById("notificationMsg").innerText=msg;document.getElementById("notificationSection").classList.remove("hidden");setTimeout(()=>document.getElementById("notificationSection").classList.add("hidden"),4000);}
     function toggleDarkMode(){document.body.classList.toggle("dark");}
     function toggleSidebar(){document.getElementById("sidebar").classList.toggle("hidden");}
     function renderChart(){const ctx=document.getElementById("paymentChart").getContext("2d");if(window.myChart)window.myChart.destroy();window.myChart=new Chart(ctx,{type:"doughnut",data:{labels:["Department Fees","School Fees"],datasets:[{data:[history.filter(h=>h.feeType.includes("Department")).reduce((a,c)=>a+parseInt(c.amount),0),history.filter(h=>h.feeType.includes("School")).reduce((a,c)=>a+parseInt(c.amount),0)],backgroundColor:["#34d399","#8b5cf6"]}]}});}
-    renderHistory();updateSummary();renderChart();
+    renderHistory();updateSummary();renderChart();loadProfile();
   </script>
 </body>
 </html>
