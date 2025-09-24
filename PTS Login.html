@@ -126,7 +126,7 @@
         if (user.emailVerified) {
           spinnerEl.classList.add("hidden");
           statusEl.textContent = "✅ Verified. Redirecting...";
-          window.location.href = "PTS-dashboard.html";
+          window.location.href = "index.html";
         } else {
           spinnerEl.classList.add("hidden");
           statusEl.textContent = "📧 Verification email sent. Please check your inbox.";
@@ -143,7 +143,7 @@
     // 🔹 Auto-redirect if already logged in and verified
     onAuthStateChanged(auth, (user) => {
       if (user && user.emailVerified) {
-        window.location.href = "PTS-dashboard.html";
+        window.location.href = "index.html";
       }
     });
 
