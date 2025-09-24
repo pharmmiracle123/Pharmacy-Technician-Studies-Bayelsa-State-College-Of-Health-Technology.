@@ -6,7 +6,7 @@
   <title>Pharmacy Technician Studies Dashboard</title>    
   <script src="https://cdn.tailwindcss.com"></script>    
 </head>    
-<body class="bg-gray-100 flex">    
+<body class="bg-gray-100 flex flex-col min-h-screen">    
 
   <!-- Mobile Toggle Button -->    
   <button id="menuToggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-900 text-white rounded-lg">    
@@ -23,9 +23,9 @@
        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">📖 Timetable</a></li>
        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">📝 Results</a></li>
        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">📂 Resources</a></li>
-        <li><a href="Accreditation.html" class="block px-4 py-2 bg-blue-700 rounded">✔️ PTS Accreditation</a></li>
+       <li><a href="Accreditation.html" class="block px-4 py-2 bg-blue-700 rounded">✔️ PTS Accreditation</a></li>
        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">⚙ Settings</a></li>
-         <li><a href="Payment Access.html" class="block px-4 py-2 rounded hover:bg-blue-700">💵 Payment Access</a></li>
+       <li><a href="Payment Access.html" class="block px-4 py-2 rounded hover:bg-blue-700">💵 Payment Access</a></li>
      </ul>
    </nav>
   </aside>    
@@ -35,25 +35,30 @@
 
     <!-- Header -->    
     <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">    
-      <h1 class="text-xl font-bold text-blue-900">Dashboard</h1>    
+      <div>
+        <h1 class="text-xl font-bold text-blue-900">Dashboard</h1>    
+        <p id="userInfo" class="text-sm text-gray-600"></p> <!-- ✅ Shows user name/email -->
+      </div>
 
       <div class="flex items-center space-x-4">    
         <input type="text" placeholder="Search..." class="px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">    
 
+        <!-- Profile Picture -->  
+        <img id="userPhoto" src="" alt="User Photo" class="hidden w-10 h-10 rounded-full border"> <!-- ✅ Avatar -->
+
         <!-- 3 Dot Menu -->    
         <div class="relative">    
           <button onclick="toggleMenu()" class="p-2 rounded-full hover:bg-gray-200 focus:outline-none">    
-            <!-- 3-dot icon -->    
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">    
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6h.01M12 12h.01M12 18h.01"/>    
             </svg>    
           </button>    
 
-          <!-- Dropdown (falls to the left) -->    
+          <!-- Dropdown -->    
           <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2 transform -translate-x-12">    
             <a href="#" class="block px-4 py-2 hover:bg-gray-100">Profile</a>    
-            <a href="#" class="block px-4 py-2 hover:bg-gray-100">Settings</a>    
-            <a href="#" class="block px-4 py-2 hover:bg-gray-100">Logout</a>    
+            <a href="settings.html" class="block px-4 py-2 hover:bg-gray-100">Settings</a>    
+            <a href="PTS Login.html" onclick="logout()" class="block px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold">Logout</a>    
           </div>    
         </div>    
       </div>    
@@ -62,10 +67,7 @@
     <!-- Hero / Welcome Section -->    
     <section class="bg-gradient-to-r from-blue-900 to-blue-600 text-white rounded-lg p-8 shadow">    
       <h2 class="text-2xl font-bold mb-2">Welcome to the Department of Pharmacy Technician Studies</h2>    
-      <p class="max-w-3xl">    
-        Our department is dedicated to training competent pharmacy technicians with strong knowledge in pharmacology, dispensing, and patient care.    
-        We combine classroom learning with practical exposure to prepare our students for excellence in healthcare delivery.    
-      </p>    
+      <p class="max-w-3xl">Our department is dedicated to training competent pharmacy technicians with strong knowledge in pharmacology, dispensing, and patient care.</p>    
     </section>    
 
     <!-- Stats Cards -->    
@@ -95,24 +97,11 @@
     <!-- Department Overview -->    
     <section class="bg-white rounded-lg shadow p-6">    
       <h2 class="text-lg font-bold text-blue-900 mb-4">About the Department</h2>    
-      <p class="mb-4">    
-        The Pharmacy Technician Studies Department at Bayelsa State College of Health Technology is committed to developing skilled healthcare professionals    
-        who can support pharmacists and provide safe, effective, and ethical patient care. Our curriculum blends core pharmaceutical sciences with    
-        practical hands-on training.    
-      </p>    
-      <p class="mb-4">    
-        Students are equipped with knowledge in pharmacology, drug dispensing, medical ethics, and hospital/community pharmacy operations.    
-        We emphasize professionalism, research, and innovation in pharmacy practice.    
-      </p>    
-      <p>    
-        Graduates of the program are eligible for professional certification and are well-prepared to work in hospitals, community pharmacies,    
-        NGOs, and research institutions both locally and internationally.    
-      </p>    
+      <p>The Pharmacy Technician Studies Department at Bayelsa State College of Health Technology is committed to developing skilled healthcare professionals...</p>    
     </section>    
 
     <!-- Announcements + Timetable + Quick Links -->    
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">    
-      <!-- Announcements -->    
       <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Latest Announcements</h2>    
         <ul class="space-y-3">    
@@ -122,7 +111,6 @@
         </ul>    
       </div>    
 
-      <!-- Timetable -->    
       <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Upcoming Timetable</h2>    
         <table class="w-full border text-sm">    
@@ -134,26 +122,13 @@
             </tr>    
           </thead>    
           <tbody>    
-            <tr class="border-t">    
-              <td class="p-2">Sept 15</td>    
-              <td class="p-2">Pharmacology I</td>    
-              <td class="p-2">Dr. Okoro</td>    
-            </tr>    
-            <tr class="border-t">    
-              <td class="p-2">Sept 18</td>    
-              <td class="p-2">Anatomy & Physiology</td>    
-              <td class="p-2">Mr. John</td>    
-            </tr>    
-            <tr class="border-t">    
-              <td class="p-2">Sept 22</td>    
-              <td class="p-2">Dispensing Practice</td>    
-              <td class="p-2">Mrs. Ebi</td>    
-            </tr>    
+            <tr class="border-t"><td class="p-2">Sept 15</td><td class="p-2">Pharmacology I</td><td class="p-2">Dr. Okoro</td></tr>    
+            <tr class="border-t"><td class="p-2">Sept 18</td><td class="p-2">Anatomy & Physiology</td><td class="p-2">Mr. John</td></tr>    
+            <tr class="border-t"><td class="p-2">Sept 22</td><td class="p-2">Dispensing Practice</td><td class="p-2">Mrs. Ebi</td></tr>    
           </tbody>    
         </table>    
       </div>    
 
-      <!-- Quick Links -->    
       <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Quick Links</h2>    
         <div class="flex flex-col space-y-3">    
@@ -167,16 +142,62 @@
 
   </div>    
 
-  <!-- JS for Dropdown + Sidebar Toggle -->    
+  <!-- Footer Credit -->    
+  <footer class="bg-blue-900 text-white text-center p-4 mt-auto">    
+    Developed by <strong>Onyeka-Udechukwu Miracle</strong> | 📧 <a href="mailto:onyekamiracle08@gmail.com" class="underline">onyekamiracle08@gmail.com</a> | 📞 08169395022    
+  </footer>    
+
+  <!-- Firebase Auth Protection -->    
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    // ✅ Real Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
+      authDomain: "pts-bscht.firebaseapp.com",
+      projectId: "pts-bscht",
+      storageBucket: "pts-bscht.firebasestorage.app",
+      messagingSenderId: "860500545291",
+      appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
+      measurementId: "G-B9NTEZYFMM"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // 🔒 Protect dashboard + show user info
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "PTS Login.html";
+      } else {
+        const infoEl = document.getElementById("userInfo");
+        const photoEl = document.getElementById("userPhoto");
+
+        infoEl.textContent = `Welcome, ${user.displayName || user.email}`;
+        if (user.photoURL) {
+          photoEl.src = user.photoURL;
+          photoEl.classList.remove("hidden");
+        }
+      }
+    });
+
+    // 🔓 Logout
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "PTS Login.html";
+      });
+    }
+    window.logout = logout;
+  </script>    
+
+  <!-- Sidebar Toggle Script -->    
   <script>    
     function toggleMenu() {    
       document.getElementById("dropdownMenu").classList.toggle("hidden");    
     }    
-
-    // Sidebar Toggle for Mobile    
     const menuToggle = document.getElementById("menuToggle");    
     const sidebar = document.getElementById("sidebar");    
-
     menuToggle.addEventListener("click", () => {    
       sidebar.classList.toggle("-translate-x-full");    
     });    
