@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTS Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 🔹 Glassmorphism style */
+    .overlay {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    /* 🔹 Typewriter effect */
+    .typewriter {
+      border-right: .15em solid #4B5563;
+      white-space: nowrap;
+      overflow: hidden;
+      display: inline-block;
+    }
+
+    /* 🔹 Fade-in animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 1s ease-out;
+    }
+
+    /* 🔹 Spinner */
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #828CFF;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="relative flex items-center justify-center h-screen bg-gray-900 text-gray-800">
+
+  <!-- 🔹 Gradient background -->
+  <div class="absolute inset-0 bg-gradient-to-br from-[#1a1c2c] via-[#2d325a] to-[#828CFF] opacity-90"></div>
+
+  <!-- 🔹 Overlay card -->
+  <div class="overlay relative z-10 p-10 rounded-2xl shadow-2xl w-[400px] text-center fade-in">
+    <!-- School logo -->
+    <img src="IMG-20250515-WA0010.jpg" alt="School Logo" class="w-20 h-20 mx-auto mb-4 drop-shadow-lg">
+
+    <!-- Welcome text -->
+    <h1 id="welcomeText" class="typewriter text-lg font-semibold text-gray-900 mb-6"></h1>
+
+    <!-- Login section -->
+    <h2 class="text-2xl font-bold mb-6 text-gray-900">Login to PTS</h2>
+    <button id="googleLogin"
+      class="w-full flex items-center justify-center gap-3 bg-[#828CFF] text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition transform duration-200">
+      <img src="https://www.svgrepo.com/show/355037/google.svg" class="w-5 h-5" alt="Google">
+      Sign in with Google
+    </button>
+
+    <!-- Status + Spinner -->
+    <div id="status" class="mt-4 text-sm text-gray-700"></div>
+    <div id="spinner" class="mt-4 hidden"><span class="spinner"></span> <span class="text-sm text-gray-700">Processing...</span></div>
+
+    <!-- Footer -->
+    <p class="mt-8 text-xs text-gray-600">© 2025 PTS Department | Powered by Rt Hon. Onyeka-Udechukwu Miracle, Tailwind & Firebase</p>
+
+    <!-- Developer credit -->
+    <div class="mt-4 text-xs text-gray-700 bg-white/40 p-2 rounded-lg shadow-inner">
+      <p>💻 Developed by <span class="font-semibold">Rt Hon. Onyeka-Udechukwu Miracle</span></p>
+      <p>Email: <a href="mailto:onyekamiracle08@gmail.com" class="text-blue-600 underline">onyekamiracle08@gmail.com</a></p>
+      <p>Phone: <a href="tel:08169395022" class="text-blue-600 underline">08169395022</a></p>
+    </div>
+  </div>
+
+  <!-- Firebase + Typewriter -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      sendEmailVerification,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    // ✅ Replace with your Firebase config
+    const firebaseConfig = {
+  apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
+  authDomain: "pts-bscht.firebaseapp.com",
+  projectId: "pts-bscht",
+  storageBucket: "pts-bscht.firebasestorage.app",
+  messagingSenderId: "860500545291",
+  appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
+  measurementId: "G-B9NTEZYFMM"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const googleLoginBtn = document.getElementById("googleLogin");
+    const statusEl = document.getElementById("status");
+    const spinnerEl = document.getElementById("spinner");
+
+    // 🔹 Sign in with Google
+    googleLoginBtn.addEventListener("click", async () => {
+      try {
+        statusEl.textContent = "";
+        spinnerEl.classList.remove("hidden");
+
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        if (user.emailVerified) {
+          spinnerEl.classList.add("hidden");
+          statusEl.textContent = "✅ Verified. Redirecting...";
+          window.location.href = "PTS-dashboard.html";
+        } else {
+          spinnerEl.classList.add("hidden");
+          statusEl.textContent = "📧 Verification email sent. Please check your inbox.";
+          await sendEmailVerification(user);
+          await signOut(auth);
+        }
+      } catch (error) {
+        spinnerEl.classList.add("hidden");
+        console.error(error);
+        statusEl.textContent = "❌ " + error.message;
+      }
+    });
+
+    // 🔹 Auto-redirect if already logged in and verified
+    onAuthStateChanged(auth, (user) => {
+      if (user && user.emailVerified) {
+        window.location.href = "PTS-dashboard.html";
+      }
+    });
+
+    // 🔹 Typewriter rotating welcome messages
+    const messages = [
+      "🎓 Welcome Students 👩‍🎓",
+      "👨‍🏫 Welcome Staff",
+      "👔 Welcome Management",
+      "🎉 Welcome to PTS Department"
+    ];
+
+    let messageIndex = 0;
+    let charIndex = 0;
+    const welcomeEl = document.getElementById("welcomeText");
+
+    function typeMessage() {
+      if (charIndex < messages[messageIndex].length) {
+        welcomeEl.textContent += messages[messageIndex].charAt(charIndex);
+        charIndex++;
+        setTimeout(typeMessage, 100);
+      } else {
+        setTimeout(eraseMessage, 2000);
+      }
+    }
+
+    function eraseMessage() {
+      if (charIndex > 0) {
+        welcomeEl.textContent = messages[messageIndex].substring(0, charIndex - 1);
+        charIndex--;
+        setTimeout(eraseMessage, 50);
+      } else {
+        messageIndex = (messageIndex + 1) % messages.length;
+        setTimeout(typeMessage, 500);
+      }
+    }
+
+    typeMessage();
+  </script>
+</body>
+</html>
