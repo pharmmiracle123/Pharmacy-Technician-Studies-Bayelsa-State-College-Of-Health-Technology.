@@ -200,74 +200,31 @@
 
     </main>
   </div>
-<script type="module">
-/* ======= Firebase + Paystack Integrated App Script ======= */
+  
+<script>
+/* ======= Corrected & Complete App Script ======= */
 
-// 🔹 Import Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut 
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  deleteDoc 
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-// ✅ Your Firebase Config (replace with real one you gave me earlier)
-const firebaseConfig = {
-      apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
-      authDomain: "pts-bscht.firebaseapp.com",
-      projectId: "pts-bscht",
-      storageBucket: "pts-bscht.firebasestorage.app",
-      messagingSenderId: "860500545291",
-      appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
-      measurementId: "G-B9NTEZYFMM"
-    };
-// Init Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// 🔹 Paystack setup
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; 
-const SUBACCOUNT_YEAR2 = "ACCT_06hfn80x3hk1neo";
-const SUBACCOUNT_YEAR3 = "ACCT_x5ze130sh1rjex6";
-
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace with your key
 const fees = {
   1: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
 };
 
-let currentUser = null;
-let history = [];
-let darkMode = false;
+let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+let darkMode = localStorage.getItem("darkMode") === "true";
+if (darkMode) document.body.classList.add("dark");
 
 /* ------------------- UI / Navigation ------------------- */
 function toggleDarkMode() {
-  darkMode = !darkMode;
-  document.body.classList.toggle("dark", darkMode);
-  if (currentUser) {
-    const userRef = doc(db, "profiles", currentUser.uid);
-    updateDoc(userRef, { darkMode });
-  }
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 }
-window.toggleDarkMode = toggleDarkMode;
 
 function toggleSidebar() {
   const s = document.getElementById("sidebar");
   if (s) s.classList.toggle("hidden");
 }
-window.toggleSidebar = toggleSidebar;
 
 function showNotification(msg) {
   const el = document.getElementById("notificationSection");
@@ -284,12 +241,21 @@ function showSection(s) {
     if (el) el.classList.add("hidden");
   });
   const target = document.getElementById(s + "Section");
-  if (target) target.classList.remove("hidden");
+  if (target) {
+    target.classList.remove("hidden");
+  } else {
+    console.warn("showSection: target not found:", s + "Section");
+  }
+  // refresh small UI pieces
   updateSummary();
   renderChart();
   renderHistory();
 }
+
+// expose to inline onclick attributes
 window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+window.toggleDarkMode = toggleDarkMode;
 
 /* ------------------- Payment / Fees ------------------- */
 function updateFees(){
@@ -305,16 +271,16 @@ function updateFees(){
   Object.entries(items).forEach(([k, v]) => {
     if (type === "All" || type === k) {
       html += `<div class="flex justify-between"><span>${k}</span><span>₦${v.toLocaleString()}</span></div>`;
-      total += v;
+      total += (type === "All" ? v : (type === k ? v : 0));
     }
   });
+  if (type !== "All" && !items[type]) total = 0;
   breakdown.innerHTML = html + `<hr class="my-2"><div class="flex justify-between font-bold"><div>Total</div><div>₦${total.toLocaleString()}</div></div>`;
   document.getElementById("totalAmount").value = total;
 }
 window.updateFees = updateFees;
 
-async function makePayment(){
-  if (!currentUser) return alert("⚠ Please login first.");
+function makePayment(){
   const name = (document.getElementById("studentName")?.value || "").trim();
   const matric = (document.getElementById("studentMatric")?.value || "").trim();
   const year = document.getElementById("studentYear")?.value;
@@ -325,31 +291,22 @@ async function makePayment(){
     return alert("⚠ Please fill all fields and ensure amount > 0");
   }
 
-  let subaccountCode = null;
-  if (year == "2") subaccountCode = SUBACCOUNT_YEAR2;
-  if (year == "3") subaccountCode = SUBACCOUNT_YEAR3;
-
   const handler = PaystackPop.setup({
     key: PAYSTACK_PUBLIC_KEY,
-    email: currentUser.email || `${matric}@pts.edu.ng`,
+    email: document.getElementById("profileEmail")?.value || `${matric}@pts.edu.ng`,
     amount: Math.round(amount * 100),
     currency: "NGN",
     ref: "PTS_" + Math.floor(Math.random() * 1e9),
-    subaccount: subaccountCode,
     metadata: {
       custom_fields: [
         { display_name: "Student Name", variable_name: "student_name", value: name },
         { display_name: "Matric No", variable_name: "matric", value: matric }
       ]
     },
-    callback: async (res) => {
-      const record = { 
-        name, matric, year, feeType: type, amount, 
-        date: new Date().toLocaleString(), reference: res.reference 
-      };
-      // save to Firestore
-      await addDoc(collection(db, "payments", currentUser.uid, "history"), record);
+    callback: (res) => {
+      const record = { name, matric, year, feeType: type, amount, date: new Date().toLocaleString(), reference: res.reference };
       history.push(record);
+      localStorage.setItem("paymentHistory", JSON.stringify(history));
       showNotification("✅ Payment successful! Ref: " + res.reference);
       renderHistory();
       updateSummary();
@@ -363,17 +320,7 @@ async function makePayment(){
 }
 window.makePayment = makePayment;
 
-/* ------------------- History ------------------- */
-async function loadHistory() {
-  if (!currentUser) return;
-  history = [];
-  const snap = await getDocs(collection(db, "payments", currentUser.uid, "history"));
-  snap.forEach(docSnap => history.push(docSnap.data()));
-  renderHistory();
-  updateSummary();
-  renderChart();
-}
-
+/* ------------------- History & Export ------------------- */
 function renderHistory(){
   const tbody = document.getElementById("historyTable");
   if (!tbody) return;
@@ -388,44 +335,86 @@ function renderHistory(){
       <td class="p-2">${escapeHtml(h.reference || "-")}</td>
     </tr>`).join("");
 }
-window.renderHistory = renderHistory;
 
-/* ------------------- Profile ------------------- */
-async function loadProfile(){
-  if (!currentUser) return;
-  const profileDoc = await getDoc(doc(db, "profiles", currentUser.uid));
-  const data = profileDoc.exists() ? profileDoc.data() : {};
-  if (document.getElementById("profileName")) document.getElementById("profileName").value = data.name || currentUser.displayName || "";
-  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = data.matric || "";
-  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = currentUser.email || "";
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = data.name || currentUser.displayName || "Not signed in";
-  if (document.getElementById("profilePic")) document.getElementById("profilePic").src = currentUser.photoURL || "default-avatar.png";
-  if (data.darkMode) { darkMode = true; document.body.classList.add("dark"); }
+function filterHistory(){
+  const q = (document.getElementById("searchHistory")?.value || "").toLowerCase().trim();
+  const filtered = history.filter(h =>
+    h.name.toLowerCase().includes(q) ||
+    h.matric.toLowerCase().includes(q) ||
+    String(h.year).includes(q) ||
+    (h.reference || "").toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById("historyTable");
+  if (!tbody) return;
+  tbody.innerHTML = filtered.map(h => `
+    <tr class="border-b">
+      <td class="p-2">${escapeHtml(h.name)}</td>
+      <td class="p-2">${escapeHtml(h.matric)}</td>
+      <td class="p-2">${escapeHtml(h.year)}</td>
+      <td class="p-2">${escapeHtml(h.feeType)}</td>
+      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
+      <td class="p-2">${escapeHtml(h.date)}</td>
+      <td class="p-2">${escapeHtml(h.reference || "-")}</td>
+    </tr>`).join("");
 }
-window.loadProfile = loadProfile;
+window.filterHistory = filterHistory;
 
-async function saveProfile(){
-  if (!currentUser) return;
-  const p = {
-    name: (document.getElementById("profileName")?.value || "").trim(),
-    matric: (document.getElementById("profileMatric")?.value || "").trim(),
-    email: (document.getElementById("profileEmail")?.value || "").trim(),
-    darkMode
-  };
-  await setDoc(doc(db, "profiles", currentUser.uid), p, { merge: true });
-  showNotification("✅ Profile saved to cloud.");
-}
-window.saveProfile = saveProfile;
-
-function logoutProfile(){
-  signOut(auth).then(() => {
-    showNotification("Logged out.");
-    currentUser = null;
-    history = [];
-    renderHistory();
+function downloadHistoryPDF(){
+  if (!history.length) return alert("No history to export.");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 40;
+  let y = 40;
+  doc.setFontSize(16);
+  doc.text("PTS Payment History", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+  y += 24;
+  doc.setFontSize(10);
+  history.forEach(h => {
+    const line = `${h.date} | ${h.name} | ${h.matric} | ${h.feeType} | ₦${Number(h.amount).toLocaleString()} | Ref: ${h.reference || "-"}`;
+    doc.text(line, margin, y);
+    y += 14;
+    if (y > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage();
+      y = 40;
+    }
   });
+  doc.save("PTS_Payment_History.pdf");
 }
-window.logoutProfile = logoutProfile;
+window.downloadHistoryPDF = downloadHistoryPDF;
+
+function downloadHistoryExcel(){
+  if (!history.length) return alert("No history available");
+  // requires SheetJS (you included it). Convert to worksheet then download.
+  try {
+    const worksheetData = history.map(h => ({
+      Date: h.date,
+      Name: h.name,
+      Matric: h.matric,
+      Year: h.year,
+      FeeType: h.feeType,
+      Amount: h.amount,
+      Reference: h.reference || "-"
+    }));
+    const ws = XLSX.utils.json_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Excel export failed.");
+  }
+}
+window.downloadHistoryExcel = downloadHistoryExcel;
+
+function clearHistory(){
+  if (!confirm("Clear local payment history? This will remove local entries.")) return;
+  history = [];
+  localStorage.removeItem("paymentHistory");
+  renderHistory();
+  updateSummary();
+  renderChart();
+}
+window.clearHistory = clearHistory;
 
 /* ------------------- Summary & Charts ------------------- */
 function updateSummary() {
@@ -465,26 +454,57 @@ function renderChart(){
   });
 }
 
+/* ------------------- Profile / Auth helpers ------------------- */
+function saveProfile(){
+  const p = {
+    name: (document.getElementById("profileName")?.value || "").trim(),
+    matric: (document.getElementById("profileMatric")?.value || "").trim(),
+    email: (document.getElementById("profileEmail")?.value || "").trim()
+  };
+  localStorage.setItem("studentProfile", JSON.stringify(p));
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  // prefill payment form
+  if (p.name) document.getElementById("studentName").value = p.name;
+  if (p.matric) document.getElementById("studentMatric").value = p.matric;
+  showNotification("Profile saved locally.");
+}
+window.saveProfile = saveProfile;
+
+function loadProfile(){
+  const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
+  if (!p) return;
+  if (document.getElementById("profileName")) document.getElementById("profileName").value = p.name || "";
+  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = p.matric || "";
+  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = p.email || "";
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";
+  if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";
+}
+window.loadProfile = loadProfile;
+
+function logoutProfile(){
+  localStorage.removeItem("studentProfile");
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";
+  showNotification("Logged out (local profile cleared).");
+}
+window.logoutProfile = logoutProfile;
+
 /* ------------------- Utilities ------------------- */
 function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
 
-/* ------------------- Init ------------------- */
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    await loadProfile();
-    await loadHistory();
-    showSection("dashboard");
-  } else {
-    currentUser = null;
-    showNotification("⚠ Not signed in.");
-  }
-});
-
+/* ------------------- Init on DOM ready ------------------- */
 document.addEventListener("DOMContentLoaded", () => {
+  // default visible section
+  showSection("dashboard");
+  renderHistory();
+  updateSummary();
+  renderChart();
+  loadProfile();
+
+  // wire updateFees when paymentType or studentYear change (safety for pages where those exist)
   document.getElementById("studentYear")?.addEventListener("change", updateFees);
   document.getElementById("paymentType")?.addEventListener("change", updateFees);
 });
-</script>> 
+</script>
 </body>
 </html>
