@@ -9,42 +9,42 @@
 <body class="bg-gray-100 flex flex-col min-h-screen">    
 
   <!-- Mobile Toggle Button -->    
-  <button id="menuToggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-900 text-white rounded-lg">    
+  <button id="menuToggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-900 text-white rounded-lg shadow-lg">    
     ☰    
   </button>    
 
   <!-- Sidebar -->    
-  <aside id="sidebar" class="w-64 bg-blue-900 text-white min-h-screen p-6 fixed md:static transform -translate-x-full md:translate-x-0 transition-transform duration-300">    
+  <aside id="sidebar" class="w-64 bg-blue-900 text-white min-h-screen p-6 fixed md:static transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">    
     <h2 class="text-2xl font-bold mb-8 text-center">PTS Department</h2>    
-      <nav>
-     <ul class="space-y-4">
-       <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">🏠 Dashboard</a></li>
-       <li><a href="calendar.html" class="block px-4 py-2 bg-blue-700 rounded">📅 Academic Calendar</a></li>
-       <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">📖 Timetable</a></li>
-       <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">📝 Results</a></li>
-       <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">📂 Resources</a></li>
-       <li><a href="Accreditation.html" class="block px-4 py-2 bg-blue-700 rounded">✔️ PTS Accreditation</a></li>
-       <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">⚙ Settings</a></li>
-       <li><a href="Payment Access.html" class="block px-4 py-2 rounded hover:bg-blue-700">💵 Payment Access</a></li>
-     </ul>
-   </nav>
+    <nav>
+      <ul class="space-y-4">
+        <li><a href="index.html" class="block px-4 py-2 rounded hover:bg-blue-700">🏠 Dashboard</a></li>
+        <li><a href="calendar.html" class="block px-4 py-2 bg-blue-700 rounded">📅 Academic Calendar</a></li>
+        <li><a href="timetable.html" class="block px-4 py-2 rounded hover:bg-blue-700">📖 Timetable</a></li>
+        <li><a href="results.html" class="block px-4 py-2 rounded hover:bg-blue-700">📝 Results</a></li>
+        <li><a href="resources.html" class="block px-4 py-2 rounded hover:bg-blue-700">📂 Resources</a></li>
+        <li><a href="Accreditation.html" class="block px-4 py-2 bg-blue-700 rounded">✔️ PTS Accreditation</a></li>
+        <li><a href="settings.html" class="block px-4 py-2 rounded hover:bg-blue-700">⚙ Settings</a></li>
+        <li><a href="Payment Access.html" class="block px-4 py-2 rounded hover:bg-blue-700">💵 Payment Access</a></li>
+      </ul>
+    </nav>
   </aside>    
 
   <!-- Main Content -->    
-  <div class="flex-1 p-6 space-y-8 md:ml-64">  
+  <div class="flex-1 p-6 space-y-8 md:ml-64 transition-all">  
 
     <!-- Header -->    
-    <header class="flex justify-between items-center bg-white shadow rounded-lg p-4">    
-      <div>
+    <header class="flex flex-col md:flex-row justify-between items-center bg-white shadow rounded-lg p-4 gap-3">    
+      <div class="text-center md:text-left">
         <h1 class="text-xl font-bold text-blue-900">Dashboard</h1>    
-        <p id="userInfo" class="text-sm text-gray-600"></p> <!-- ✅ Shows user name/email -->
+        <p id="userInfo" class="text-sm text-gray-600"></p>
       </div>
 
-      <div class="flex items-center space-x-4">    
-        <input type="text" placeholder="Search..." class="px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">    
+      <div class="flex items-center space-x-4 w-full md:w-auto justify-center md:justify-end">    
+        <input type="text" placeholder="Search..." class="w-full md:w-64 px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">    
 
         <!-- Profile Picture -->  
-        <img id="userPhoto" src="" alt="User Photo" class="hidden w-10 h-10 rounded-full border"> <!-- ✅ Avatar -->
+        <img id="userPhoto" src="" alt="User Photo" class="hidden w-10 h-10 rounded-full border">    
 
         <!-- 3 Dot Menu -->    
         <div class="relative">    
@@ -55,7 +55,7 @@
           </button>    
 
           <!-- Dropdown -->    
-          <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2 transform -translate-x-12">    
+          <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2">    
             <a href="#" class="block px-4 py-2 hover:bg-gray-100">Profile</a>    
             <a href="settings.html" class="block px-4 py-2 hover:bg-gray-100">Settings</a>    
             <a href="PTS Login.html" onclick="logout()" class="block px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold">Logout</a>    
@@ -64,30 +64,30 @@
       </div>    
     </header>    
 
-    <!-- Hero / Welcome Section -->    
-    <section class="bg-gradient-to-r from-blue-900 to-blue-600 text-white rounded-lg p-8 shadow">    
+    <!-- Hero Section -->    
+    <section class="bg-gradient-to-r from-blue-900 to-blue-600 text-white rounded-lg p-8 shadow text-center md:text-left">    
       <h2 class="text-2xl font-bold mb-2">Welcome to the Department of Pharmacy Technician Studies</h2>    
-      <p class="max-w-3xl">Our department is dedicated to training competent pharmacy technicians with strong knowledge in pharmacology, dispensing, and patient care.</p>    
+      <p class="max-w-3xl mx-auto md:mx-0">Our department is dedicated to training competent pharmacy technicians with strong knowledge in pharmacology, dispensing, and patient care.</p>    
     </section>    
 
     <!-- Stats Cards -->    
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">    
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition text-center">    
         <h3 class="text-lg font-semibold text-blue-900">Students</h3>    
         <p class="text-3xl font-bold mt-2">135</p>    
         <span class="text-sm text-gray-500">Enrolled this session</span>    
       </div>    
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition text-center">    
         <h3 class="text-lg font-semibold text-blue-900">Lecturers</h3>    
         <p class="text-3xl font-bold mt-2">25</p>    
         <span class="text-sm text-gray-500">Active faculty</span>    
       </div>    
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition text-center">    
         <h3 class="text-lg font-semibold text-blue-900">Courses</h3>    
         <p class="text-3xl font-bold mt-2">32</p>    
         <span class="text-sm text-gray-500">This semester</span>    
       </div>    
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition text-center">    
         <h3 class="text-lg font-semibold text-blue-900">Upcoming Exams</h3>    
         <p class="text-3xl font-bold mt-2">Oct 2025</p>    
         <span class="text-sm text-gray-500">Semester exams</span>    
@@ -102,7 +102,8 @@
 
     <!-- Announcements + Timetable + Quick Links -->    
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">    
-      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+      <!-- Announcements -->    
+      <div class="bg-white rounded-lg shadow p-6">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Latest Announcements</h2>    
         <ul class="space-y-3">    
           <li class="p-3 bg-blue-50 rounded">📢 Orientation for new students – Sept 20</li>    
@@ -111,25 +112,29 @@
         </ul>    
       </div>    
 
-      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+      <!-- Timetable -->    
+      <div class="bg-white rounded-lg shadow p-6">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Upcoming Timetable</h2>    
-        <table class="w-full border text-sm">    
-          <thead>    
-            <tr class="bg-blue-900 text-white">    
-              <th class="p-2">Date</th>    
-              <th class="p-2">Course</th>    
-              <th class="p-2">Lecturer</th>    
-            </tr>    
-          </thead>    
-          <tbody>    
-            <tr class="border-t"><td class="p-2">Sept 15</td><td class="p-2">Pharmacology I</td><td class="p-2">Dr. Okoro</td></tr>    
-            <tr class="border-t"><td class="p-2">Sept 18</td><td class="p-2">Anatomy & Physiology</td><td class="p-2">Mr. John</td></tr>    
-            <tr class="border-t"><td class="p-2">Sept 22</td><td class="p-2">Dispensing Practice</td><td class="p-2">Mrs. Ebi</td></tr>    
-          </tbody>    
-        </table>    
+        <div class="overflow-x-auto">    
+          <table class="w-full border text-sm">    
+            <thead>    
+              <tr class="bg-blue-900 text-white">    
+                <th class="p-2">Date</th>    
+                <th class="p-2">Course</th>    
+                <th class="p-2">Lecturer</th>    
+              </tr>    
+            </thead>    
+            <tbody>    
+              <tr class="border-t"><td class="p-2">Sept 15</td><td class="p-2">Pharmacology I</td><td class="p-2">Dr. Okoro</td></tr>    
+              <tr class="border-t"><td class="p-2">Sept 18</td><td class="p-2">Anatomy & Physiology</td><td class="p-2">Mr. John</td></tr>    
+              <tr class="border-t"><td class="p-2">Sept 22</td><td class="p-2">Dispensing Practice</td><td class="p-2">Mrs. Ebi</td></tr>    
+            </tbody>    
+          </table>    
+        </div>    
       </div>    
 
-      <div class="bg-white rounded-lg shadow p-6 lg:col-span-1">    
+      <!-- Quick Links -->    
+      <div class="bg-white rounded-lg shadow p-6">    
         <h2 class="text-lg font-bold text-blue-900 mb-4">Quick Links</h2>    
         <div class="flex flex-col space-y-3">    
           <a href="#" class="px-4 py-2 bg-blue-100 rounded hover:bg-blue-200">📘 Student Handbook</a>    
@@ -143,7 +148,7 @@
   </div>    
 
   <!-- Footer Credit -->    
-  <footer class="bg-blue-900 text-white text-center p-4 mt-auto">    
+  <footer class="bg-blue-900 text-white text-center p-4 mt-auto text-sm md:text-base">    
     Developed by <strong>Onyeka-Udechukwu Miracle</strong> | 📧 <a href="mailto:onyekamiracle08@gmail.com" class="underline">onyekamiracle08@gmail.com</a> | 📞 08169395022    
   </footer>    
 
@@ -152,7 +157,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-    // ✅ Real Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
       authDomain: "pts-bscht.firebaseapp.com",
