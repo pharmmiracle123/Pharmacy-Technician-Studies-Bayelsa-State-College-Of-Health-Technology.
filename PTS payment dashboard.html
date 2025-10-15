@@ -202,51 +202,57 @@
   </div>
 Run the full script
 
-<script>  
-/* ======= Corrected & Complete App Script ======= */  
-  
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace with your key  
-const handler = PaystackPop.setup({
-  key: PAYSTACK_PUBLIC_KEY,
-  email: email,
-  amount: amount * 100, // Paystack expects kobo
-  currency: "NGN",
-  ref: "PTS_" + Math.floor(Math.random() * 1000000000),
-  split_code: "SPL_Ijp4pkn553", // ✅ your real Paystack Split Code here
-  metadata: {
-    custom_fields: [
-      { display_name: "Student Name", variable_name: "student_name", value: name }
-    ]
-  },
-  callback: function (response) {
-    alert("✅ Payment successful! Reference: " + response.reference);
-    console.log("Payment successful:", response);
-  },
-  onClose: function () {
-    alert("❌ Payment window closed.");
-  }
-});
-  
-const fees = {  
-  1: { "Course enrollment": 200, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },  
-  2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },  
-  3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }  
-};  
-  
+<script>
+/* ======= Corrected & Clean App Script ======= */
 
-  handler.openIframe();  
-}  
-  
-let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");  
-let darkMode = localStorage.getItem("darkMode") === "true";  
-if (darkMode) document.body.classList.add("dark");  
-  
-/* ------------------- UI / Navigation ------------------- */  
-function toggleDarkMode() {  
-  document.body.classList.toggle("dark");  
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));  
-}  
-  
+// Define your Paystack public key once
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace with your own key
+
+// Fee structure
+const fees = {
+  1: { "Course enrollment": 200, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
+  2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
+  3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
+};
+
+// Function to start payment
+function makePayment(name, email, amount) {
+  const handler = PaystackPop.setup({
+    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",
+    email: email,
+    amount: amount * 100, // Paystack uses kobo
+    currency: "NGN",
+    ref: "PTS_" + Math.floor(Math.random() * 1000000000),
+    split_code: "SPL_Ijp4pkn553", // your Paystack Split Code
+    metadata: {
+      custom_fields: [
+        {
+          display_name: "Student Name",
+          variable_name: "student_name",
+          value: name
+        }
+      ]
+    },
+    callback: function (response) {
+      alert("✅ Payment successful! Reference: " + response.reference);
+      console.log("Payment successful:", response);
+    },
+    onClose: function () {
+      alert("❌ Payment window closed.");
+    }
+  });
+
+  handler.openIframe();
+}
+
+// Example usage:
+// makePayment("John Doe", "student@example.com", 10000);
+
+// Handle dark mode and payment history
+let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+let darkMode = localStorage.getItem("darkMode") === "true";
+if (darkMode) document.body.classList.add("dark");
+}
 function toggleSidebar() {  
   const s = document.getElementById("sidebar");  
   if (s) s.classList.toggle("hidden");  
@@ -316,31 +322,45 @@ function makePayment(){
   if (!name || !matric || !year || amount <= 0) {  
     return alert("⚠ Please fill all fields and ensure amount > 0");  
   }  
+  // paystack pop-up 
   
   const handler = PaystackPop.setup({  
-    key: PAYSTACK_PUBLIC_KEY,  
-    email: document.getElementById("profileEmail")?.value || `${matric}@pts.edu.ng`,  
-    amount: Math.round(amount * 100),  
-    currency: "NGN",  
-    ref: "PTS_" + Math.floor(Math.random() * 1e9),  
-    metadata: {  
-      custom_fields: [  
-        { display_name: "Student Name", variable_name: "student_name", value: name },  
-        { display_name: "Matric No", variable_name: "matric", value: matric }  
-      ]  
-    },  
-    callback: (res) => {  
-      const record = { name, matric, year, feeType: type, amount, date: new Date().toLocaleString(), reference: res.reference };  
-      history.push(record);  
-      localStorage.setItem("paymentHistory", JSON.stringify(history));  
-      showNotification("✅ Payment successful! Ref: " + res.reference);  
-      renderHistory();  
-      updateSummary();  
-      renderChart();  
-    },  
-    onClose: () => {  
-      showNotification("❌ Payment window closed.");  
-    }  
+  key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",  
+  email: document.getElementById("profileEmail")?.value || `${matric}@pts.edu.ng`,  
+  amount: Math.round(amount * 100), // Paystack expects amount in kobo  
+  currency: "NGN",  
+  ref: "PTS_" + Math.floor(Math.random() * 1e9),  
+
+  // ✅ Add your Split Code here
+  split_code: "SPL_Ijp4pkn553",  // Replace with your actual Paystack Split Code
+
+  metadata: {  
+    custom_fields: [  
+      { display_name: "Student Name", variable_name: "student_name", value: name },  
+      { display_name: "Matric No", variable_name: "matric", value: matric }  
+    ]  
+  },  
+
+  callback: (res) => {  
+    const record = {  
+      name, matric, year, feeType: type, amount,  
+      date: new Date().toLocaleString(),  
+      reference: res.reference  
+    };  
+
+    history.push(record);  
+    localStorage.setItem("paymentHistory", JSON.stringify(history));  
+
+    showNotification("✅ Payment successful! Ref: " + res.reference);  
+    renderHistory();  
+    updateSummary();  
+    renderChart();  
+  },  
+
+  onClose: () => {  
+    showNotification("❌ Payment window closed.");  
+  }  
+});
   });  
   handler.openIframe();  
 }  
