@@ -20,8 +20,15 @@
   <!-- Paystack -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
+  <!-- Firebase (compat for simpler browser usage) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-functions-compat.js"></script>
+
   <style>
-    .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
+    .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; white-space: pre-wrap; }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
@@ -108,7 +115,7 @@
 
         <!-- Chart -->
         <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment <Overview></Overview></h3>
+          <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
           <canvas id="paymentChart" height="200"></canvas>
         </div>
       </section>
@@ -117,10 +124,10 @@
       <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
         <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
 
-        <form id="paymentForm" class="space-y-4">
+        <form id="paymentForm" class="space-y-4" onsubmit="event.preventDefault(); makePayment();">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input id="studentName" type="text" placeholder="Full Name" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
-            <input id="studentMatric" type="text" placeholder="Matric Number" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+            <input id="studentName" name="studentName" type="text" placeholder="Full Name" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+            <input id="studentMatric" name="studentMatric" type="text" placeholder="Matric Number" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -142,9 +149,13 @@
 
           <div id="feeBreakdown" class="bg-gray-50 dark:bg-gray-800 p-3 rounded text-sm receipt-mono"></div>
 
+          <!-- NOTE: split preview removed to avoid exposing percentage breakdown -->
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-            <input id="totalAmount" type="number" placeholder="Amount" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" readonly>
-            <button type="button" onclick="makePayment()" class="bg-blue-700 text-white py-2 rounded">Pay Now</button>
+            <input id="totalAmount" name="totalAmount" type="number" placeholder="Amount" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" readonly>
+            <div class="flex gap-2">
+              <button type="submit" class="bg-blue-700 text-white py-2 px-4 rounded">Pay Now</button>
+            </div>
           </div>
         </form>
       </section>
@@ -171,6 +182,7 @@
                 <th class="p-2 text-left">Amount</th>
                 <th class="p-2 text-left">Date</th>
                 <th class="p-2 text-left">Ref</th>
+                <th class="p-2 text-left">Receipt</th>
               </tr>
             </thead>
             <tbody id="historyTable" class="bg-white dark:bg-gray-800"></tbody>
@@ -200,357 +212,611 @@
 
     </main>
   </div>
-Run the full script
 
+<!-- ========================= SCRIPT ========================= -->
 <script>
-/* ======= Corrected & Clean App Script ======= */
+/* ======= Finalized App Script (extended with Firebase) ======= */
 
-// Define your Paystack public key once
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace with your own key
+/* --------------------- PAYSTACK / SPLIT --------------------- */
+// Put your Paystack public key and split code here (already provided by you)
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
+const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553"; // configured in Paystack dashboard
 
-// Fee structure
+/* ---------------------- FIREBASE CONFIG --------------------- */
+/*
+  IMPORTANT: Replace with your Firebase project's config below.
+  To get this, open Firebase Console > Project Settings > SDK setup and configuration
+*/
+const firebaseConfig = {
+  apiKey: "REPLACE_WITH_YOURS",
+  authDomain: "REPLACE_WITH_YOURS.firebaseapp.com",
+  projectId: "REPLACE_WITH_YOURS",
+  storageBucket: "REPLACE_WITH_YOURS.appspot.com",
+  messagingSenderId: "REPLACE_WITH_YOURS",
+  appId: "REPLACE_WITH_YOURS"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+const functions = firebase.functions();
+
+/* ------------------ OPTIONAL: SIGN-IN ANON (SIMPLE) ------------------
+ If you want users to have a per-user dashboard, enable Firebase Authentication.
+ The code below signs users in anonymously so payments can be tied to an uid.
+ -------------------------------------------------------------------- */
+let currentUser = null;
+auth.onAuthStateChanged(u => {
+  currentUser = u;
+  if (u) {
+    // user signed in (anonymous or real)
+    console.log("Firebase auth user:", u.uid, u.isAnonymous ? "(anonymous)" : "");
+    if (document.getElementById("userNameDisplay")) {
+      const p = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
+      document.getElementById("userNameDisplay").innerText = p.name || (u.isAnonymous ? "Guest" : "User");
+    }
+  } else {
+    // sign in anonymously
+    auth.signInAnonymously().catch(err => {
+      console.error("Anonymous sign-in failed:", err);
+    });
+  }
+});
+
+/* ------------------- Fee structure ------------------- */
 const fees = {
   1: { "Course enrollment": 200, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
 };
 
-// Function to start payment
-function makePayment(name, email, amount) {
+/* ------------------- Local data ------------------- */
+let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+let darkMode = localStorage.getItem("darkMode") === "true";
+if (darkMode) document.body.classList.add("dark");
+
+/* ------------------- UI / Navigation ------------------- */
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+}
+
+function toggleSidebar() {
+  const s = document.getElementById("sidebar");
+  if (s) s.classList.toggle("hidden");
+}
+
+/* showSection fixed to always work: */
+function showSection(s) {
+  const sections = ["dashboard","payment","history","profile","settings"];
+  sections.forEach(id => {
+    const el = document.getElementById(id + "Section");
+    if (el) el.classList.add("hidden");
+  });
+  const target = document.getElementById(s + "Section");
+  if (target) target.classList.remove("hidden");
+  updateSummary();
+  renderChart();
+  renderHistory();
+}
+window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+window.toggleDarkMode = toggleDarkMode;
+
+/* ------------------- Payment / Fees ------------------- */
+function updateFees(){
+  const year = document.getElementById("studentYear")?.value;
+  const type = document.getElementById("paymentType")?.value || "All";
+  const breakdown = document.getElementById("feeBreakdown");
+  if (!breakdown) return;
+  breakdown.innerHTML = "";
+  if (!year) { if(document.getElementById("totalAmount")) document.getElementById("totalAmount").value = ""; return; }
+  const items = fees[year] || {};
+  let html = "";
+  let total = 0;
+  Object.entries(items).forEach(([k, v]) => {
+    if (type === "All" || type === k) {
+      html += `<div class="flex justify-between"><span>${k}</span><span>₦${v.toLocaleString()}</span></div>`;
+      total += (type === "All" ? v : (type === k ? v : 0));
+    }
+  });
+  if (type !== "All" && !items[type]) total = 0;
+  breakdown.innerHTML = html + `<hr class="my-2"><div class="flex justify-between font-bold"><div>Total</div><div>₦${total.toLocaleString()}</div></div>`;
+  const totalEl = document.getElementById("totalAmount");
+  if (totalEl) totalEl.value = total;
+}
+window.updateFees = updateFees;
+
+/* ------------------- Make Payment (Paystack + Firebase) ------------------- */
+async function makePayment(){
+  const name = (document.getElementById("studentName")?.value || "").trim();
+  const matric = (document.getElementById("studentMatric")?.value || "").trim();
+  const year = document.getElementById("studentYear")?.value;
+  const amount = Number(document.getElementById("totalAmount")?.value || 0);
+  const type = document.getElementById("paymentType")?.value || "All";
+  const email = (document.getElementById("profileEmail")?.value || `${matric}@pts.edu.ng`);
+
+  if (!name || !matric || !year || amount <= 0) {
+    return alert("⚠ Please fill all fields and ensure amount > 0");
+  }
+
+  const reference = "PTS_" + Math.floor(Math.random() * 1e9);
+
+  // Setup Paystack inline - split_code included (server-side split configured in dashboard).
   const handler = PaystackPop.setup({
-    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",
-    email: email,
-    amount: amount * 100, // Paystack uses kobo
+    key: PAYSTACK_PUBLIC_KEY,
+    email,
+    amount: Math.round(amount * 100), // kobo
     currency: "NGN",
-    ref: "PTS_" + Math.floor(Math.random() * 1000000000),
-    split_code: "SPL_Ijp4pkn553", // your Paystack Split Code
+    ref: reference,
+    split_code: PAYSTACK_SPLIT_CODE,
     metadata: {
       custom_fields: [
-        {
-          display_name: "Student Name",
-          variable_name: "student_name",
-          value: name
-        }
+        { display_name: "Student Name", variable_name: "student_name", value: name },
+        { display_name: "Matric No", variable_name: "matric", value: matric }
       ]
     },
-    callback: function (response) {
-      alert("✅ Payment successful! Reference: " + response.reference);
-      console.log("Payment successful:", response);
+    callback: async (res) => {
+      // On success: build record, save to Firestore, and generate/upload receipt
+      const record = {
+        name,
+        matric,
+        year,
+        feeType: type,
+        amount,
+        date: new Date().toISOString(),
+        reference: res.reference,
+        status: "SUCCESS",
+        payerEmail: email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      try {
+        // Save to local history for instant UI & fallback
+        history.push(record);
+        localStorage.setItem("paymentHistory", JSON.stringify(history));
+        renderHistory();
+        updateSummary();
+        renderChart();
+
+        // Save to Firestore (per user or guest)
+        const uid = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : null;
+        let docRef;
+        if (uid) {
+          docRef = await db.collection("users").doc(uid).collection("payments").add(record);
+        } else {
+          docRef = await db.collection("guest_payments").add(record);
+        }
+        console.log("Saved payment to Firestore at:", docRef.id);
+
+        // Generate receipt PDF (returns blob)
+        const { blob, filename } = await generateReceiptPDF(record, true);
+
+        // Upload receipt to Firebase Storage and get URL
+        const receiptUrl = await uploadReceiptToStorage(blob, filename, docRef.id);
+        console.log("Receipt uploaded:", receiptUrl);
+
+        // Update Firestore record with receipt URL and storage path
+        await docRef.update({ receiptUrl, storagePath: `receipts/${docRef.id}/${filename}` });
+
+        // Try to trigger an email via Cloud Function (placeholder)
+        // Replace SEND_EMAIL_FUNCTION_URL with your deployed function endpoint
+        // or implement a callable Cloud Function and use functions.httpsCallable('sendReceipt')(...)
+        // Below is a client-side fetch to your function endpoint:
+        const SEND_EMAIL_FUNCTION_URL = "https://us-central1-YOUR_PROJECT.cloudfunctions.net/sendReceiptEmail"; // <-- replace
+        // Uncomment and replace with your own function URL
+        /*
+        try {
+          await fetch(SEND_EMAIL_FUNCTION_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: record.payerEmail, name: record.name, reference: record.reference, receiptUrl })
+          });
+        } catch (e) {
+          console.warn("Email send request failed (implement Cloud Function to send email):", e);
+        }
+        */
+
+        showNotification("✅ Payment successful! Ref: " + res.reference);
+      } catch (err) {
+        console.error("Error saving payment or uploading receipt:", err);
+        showNotification("⚠ Payment succeeded but saving/uploading failed. Check console.");
+      }
     },
-    onClose: function () {
-      alert("❌ Payment window closed.");
+    onClose: () => {
+      showNotification("❌ Payment window closed.");
     }
   });
 
   handler.openIframe();
 }
+window.makePayment = makePayment;
 
-// Example usage:
-// makePayment("John Doe", "student@example.com", 10000);
+/* ------------------- Receipt Generation (jsPDF) ------------------- */
+/**
+ * generateReceiptPDF(record, returnBlob)
+ *  - record: payment record used to fill the receipt
+ *  - returnBlob (bool): if true, returns { blob, filename } instead of saving locally
+ *
+ * The receipt design uses the #logoHeader img as logo so it's editable by changing that src.
+ */
+async function generateReceiptPDF(record, returnBlob = false) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    let y = 40;
 
-// Handle dark mode and payment history
-let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-let darkMode = localStorage.getItem("darkMode") === "true";
-if (darkMode) document.body.classList.add("dark");
+    // Load logo (if present) as dataURL
+    const logoImg = document.getElementById("logoHeader");
+    let logoDataUrl = null;
+    if (logoImg && logoImg.src) {
+      try {
+        logoDataUrl = await imgToDataURL(logoImg.src);
+      } catch (e) {
+        console.warn("Could not load logo for receipt:", e);
+      }
+    }
+
+    // Header
+    if (logoDataUrl) {
+      const maxLogoWidth = 120;
+      doc.addImage(logoDataUrl, "PNG", margin, y, maxLogoWidth, 40);
+    }
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("PTS Payment Receipt", pageWidth - margin, y + 18, { align: "right" });
+    y += 60;
+
+    // Subheader & reference
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${new Date(record.date).toLocaleString()}`, margin, y);
+    doc.text(`Reference: ${record.reference}`, pageWidth - margin, y, { align: "right" });
+    y += 22;
+
+    // Payment details box
+    doc.setDrawColor(200);
+    doc.rect(margin, y, pageWidth - margin * 2, 120, "S");
+    let boxY = y + 16;
+    const labelX = margin + 8;
+    const valX = pageWidth / 2;
+    doc.setFontSize(11);
+
+    doc.text("Student Name:", labelX, boxY);
+    doc.text(record.name || "-", valX, boxY);
+    boxY += 18;
+
+    doc.text("Matric No:", labelX, boxY);
+    doc.text(record.matric || "-", valX, boxY);
+    boxY += 18;
+
+    doc.text("Year:", labelX, boxY);
+    doc.text(String(record.year || "-"), valX, boxY);
+    boxY += 18;
+
+    doc.text("Fee Type:", labelX, boxY);
+    doc.text(String(record.feeType || "-"), valX, boxY);
+    boxY += 18;
+
+    doc.text("Amount Paid:", labelX, boxY);
+    doc.text(`₦${Number(record.amount).toLocaleString()}`, valX, boxY);
+    boxY += 20;
+
+    y += 140;
+
+    // Notes
+    doc.setFontSize(10);
+    doc.text("Notes:", margin, y);
+    y += 14;
+    doc.setFontSize(9);
+    const noteLines = doc.splitTextToSize("This is an autogenerated receipt. For official verification, check the transaction on Paystack using the reference or contact the bursary. The receipt design is editable via the site's logo and the generateReceiptPDF function.", pageWidth - margin * 2);
+    doc.text(noteLines, margin, y);
+    y += noteLines.length * 12 + 20;
+
+    // Signature
+    doc.setFontSize(11);
+    doc.text("__________________", margin, y);
+    doc.text("Authorized Signature", margin, y + 14);
+
+    // Footer small
+    doc.setFontSize(8);
+    doc.text(`Receipt generated by PTS Payments • Ref: ${record.reference}`, margin, doc.internal.pageSize.getHeight() - 30);
+
+    // filename
+    const filename = `Receipt_${(record.matric || "unknown")}_${record.reference}.pdf`;
+
+    if (returnBlob) {
+      const pdfBlob = doc.output("blob");
+      return { blob: pdfBlob, filename };
+    } else {
+      doc.save(filename);
+    }
+  } catch (err) {
+    console.error("Receipt generation failed:", err);
+    alert("❌ Could not generate receipt PDF.");
+    throw err;
+  }
 }
-function toggleSidebar() {  
-  const s = document.getElementById("sidebar");  
-  if (s) s.classList.toggle("hidden");  
-}  
-  
-function showNotification(msg) {  
-  const el = document.getElementById("notificationSection");  
-  if (!el) return;  
-  document.getElementById("notificationMsg").innerText = msg;  
-  el.classList.remove("hidden");  
-  setTimeout(() => el.classList.add("hidden"), 3500);  
-}  
-  
-function showSection(s) {  
-  const sections = ["dashboard","payment","history","profile","settings"];  
-  sections.forEach(id => {  
-    const el = document.getElementById(id + "Section");  
-    if (el) el.classList.add("hidden");  
-  });  
-  const target = document.getElementById(s + "Section");  
-  if (target) {  
-    target.classList.remove("hidden");  
-  } else {  
-    console.warn("showSection: target not found:", s + "Section");  
-  }  
-  // refresh small UI pieces  
-  updateSummary();  
-  renderChart();  
-  renderHistory();  
-}  
-  
-// expose to inline onclick attributes  
-window.showSection = showSection;  
-window.toggleSidebar = toggleSidebar;  
-window.toggleDarkMode = toggleDarkMode;  
-  
-/* ------------------- Payment / Fees ------------------- */  
-function updateFees(){  
-  const year = document.getElementById("studentYear")?.value;  
-  const type = document.getElementById("paymentType")?.value || "All";  
-  const breakdown = document.getElementById("feeBreakdown");  
-  if (!breakdown) return;  
-  breakdown.innerHTML = "";  
-  if (!year) { document.getElementById("totalAmount").value = ""; return; }  
-  const items = fees[year] || {};  
-  let html = "";  
-  let total = 0;  
-  Object.entries(items).forEach(([k, v]) => {  
-    if (type === "All" || type === k) {  
-      html += `<div class="flex justify-between"><span>${k}</span><span>₦${v.toLocaleString()}</span></div>`;  
-      total += (type === "All" ? v : (type === k ? v : 0));  
-    }  
-  });  
-  if (type !== "All" && !items[type]) total = 0;  
-  breakdown.innerHTML = html + `<hr class="my-2"><div class="flex justify-between font-bold"><div>Total</div><div>₦${total.toLocaleString()}</div></div>`;  
-  document.getElementById("totalAmount").value = total;  
-}  
-window.updateFees = updateFees;  
-  
-function makePayment(){  
-  const name = (document.getElementById("studentName")?.value || "").trim();  
-  const matric = (document.getElementById("studentMatric")?.value || "").trim();  
-  const year = document.getElementById("studentYear")?.value;  
-  const amount = Number(document.getElementById("totalAmount")?.value || 0);  
-  const type = document.getElementById("paymentType")?.value || "All";  
-  
-  if (!name || !matric || !year || amount <= 0) {  
-    return alert("⚠ Please fill all fields and ensure amount > 0");  
-  }  
-  // paystack pop-up 
-  
-  const handler = PaystackPop.setup({  
-  key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",  
-  email: document.getElementById("profileEmail")?.value || `${matric}@pts.edu.ng`,  
-  amount: Math.round(amount * 100), // Paystack expects amount in kobo  
-  currency: "NGN",  
-  ref: "PTS_" + Math.floor(Math.random() * 1e9),  
 
-  // ✅ Add your Split Code here
-  split_code: "SPL_Ijp4pkn553",  // Replace with your actual Paystack Split Code
+/* helper: convert image url to dataURL (for jsPDF) */
+function imgToDataURL(url) {
+  return new Promise((resolve, reject) => {
+    // if already data:, return immediately
+    if (url.startsWith("data:")) return resolve(url);
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = (e) => reject(e);
+    img.src = url;
+    // in case of cached image blocking crossOrigin load
+    if (img.complete) {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      } catch (e) {
+        // fallback to rejecting; still ok
+      }
+    }
+  });
+}
 
-  metadata: {  
-    custom_fields: [  
-      { display_name: "Student Name", variable_name: "student_name", value: name },  
-      { display_name: "Matric No", variable_name: "matric", value: matric }  
-    ]  
-  },  
+/* ------------------- Upload receipt to Firebase Storage ------------------- */
+async function uploadReceiptToStorage(blob, filename, docId) {
+  try {
+    const path = `receipts/${docId}/${filename}`;
+    const storageRef = storage.ref().child(path);
+    const snapshot = await storageRef.put(blob);
+    const url = await snapshot.ref.getDownloadURL();
+    return url;
+  } catch (err) {
+    console.error("Failed to upload receipt:", err);
+    throw err;
+  }
+}
 
-  callback: (res) => {  
-    const record = {  
-      name, matric, year, feeType: type, amount,  
-      date: new Date().toLocaleString(),  
-      reference: res.reference  
-    };  
+/* ------------------- History & Export ------------------- */
+function renderHistory(){
+  const tbody = document.getElementById("historyTable");
+  if (!tbody) return;
+  // If Firestore used, try to load latest from Firestore (optional)
+  tbody.innerHTML = history.map((h, idx) => `
+    <tr class="border-b">
+      <td class="p-2">${escapeHtml(h.name)}</td>
+      <td class="p-2">${escapeHtml(h.matric)}</td>
+      <td class="p-2">${escapeHtml(h.year)}</td>
+      <td class="p-2">${escapeHtml(h.feeType)}</td>
+      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
+      <td class="p-2">${new Date(h.date).toLocaleString()}</td>
+      <td class="p-2">${escapeHtml(h.reference || "-")}</td>
+      <td class="p-2"><button onclick="downloadStoredReceipt('${escapeHtml(h.reference)}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">Download Receipt</button></td>
+    </tr>`).join("");
+}
 
-    history.push(record);  
-    localStorage.setItem("paymentHistory", JSON.stringify(history));  
+async function downloadStoredReceipt(reference) {
+  // Look up Firestore for receiptUrl (search guest_payments and user collections)
+  try {
+    // Search current user's collection first
+    let url = null;
+    if (auth.currentUser && auth.currentUser.uid) {
+      const q = await db.collection("users").doc(auth.currentUser.uid).collection("payments").where("reference", "==", reference).limit(1).get();
+      if (!q.empty) {
+        url = q.docs[0].data().receiptUrl;
+      }
+    }
+    if (!url) {
+      const q2 = await db.collection("guest_payments").where("reference", "==", reference).limit(1).get();
+      if (!q2.empty) url = q2.docs[0].data().receiptUrl;
+    }
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      alert("Receipt not found in storage. If the payment was recent, try refreshing.");
+    }
+  } catch (e) {
+    console.error("Error fetching receipt URL:", e);
+    alert("Could not fetch receipt. Check console.");
+  }
+}
 
-    showNotification("✅ Payment successful! Ref: " + res.reference);  
-    renderHistory();  
-    updateSummary();  
-    renderChart();  
-  },  
+function filterHistory(){
+  const q = (document.getElementById("searchHistory")?.value || "").toLowerCase().trim();
+  const filtered = history.filter(h =>
+    (h.name || "").toLowerCase().includes(q) ||
+    (h.matric || "").toLowerCase().includes(q) ||
+    String(h.year).includes(q) ||
+    ((h.reference || "").toLowerCase().includes(q))
+  );
+  const tbody = document.getElementById("historyTable");
+  if (!tbody) return;
+  tbody.innerHTML = filtered.map((h, idx) => `
+    <tr class="border-b">
+      <td class="p-2">${escapeHtml(h.name)}</td>
+      <td class="p-2">${escapeHtml(h.matric)}</td>
+      <td class="p-2">${escapeHtml(h.year)}</td>
+      <td class="p-2">${escapeHtml(h.feeType)}</td>
+      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
+      <td class="p-2">${new Date(h.date).toLocaleString()}</td>
+      <td class="p-2">${escapeHtml(h.reference || "-")}</td>
+      <td class="p-2"><button onclick="downloadStoredReceipt('${escapeHtml(h.reference)}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">Download Receipt</button></td>
+    </tr>`).join("");
+}
+window.filterHistory = filterHistory;
 
-  onClose: () => {  
-    showNotification("❌ Payment window closed.");  
-  }  
+function downloadHistoryPDF(){
+  if (!history.length) return alert("No history to export.");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 40;
+  let y = 40;
+  doc.setFontSize(16);
+  doc.text("PTS Payment History", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+  y += 30;
+  doc.setFontSize(10);
+  history.forEach(h => {
+    const line = `${new Date(h.date).toLocaleString()} | ${h.name} | ${h.matric} | ${h.feeType} | ₦${Number(h.amount).toLocaleString()} | Ref: ${h.reference || "-"}`;
+    doc.text(line, margin, y);
+    y += 14;
+    if (y > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage();
+      y = 40;
+    }
+  });
+  doc.save("PTS_Payment_History.pdf");
+}
+window.downloadHistoryPDF = downloadHistoryPDF;
+
+function downloadHistoryExcel(){
+  if (!history.length) return alert("No history available");
+  try {
+    const worksheetData = history.map(h => ({
+      Date: new Date(h.date).toLocaleString(),
+      Name: h.name,
+      Matric: h.matric,
+      Year: h.year,
+      FeeType: h.feeType,
+      Amount: h.amount,
+      Reference: h.reference || "-"
+    }));
+    const ws = XLSX.utils.json_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Excel export failed.");
+  }
+}
+window.downloadHistoryExcel = downloadHistoryExcel;
+
+function clearHistory(){
+  if (!confirm("Clear local payment history? This will remove local entries.")) return;
+  history = [];
+  localStorage.removeItem("paymentHistory");
+  renderHistory();
+  updateSummary();
+  renderChart();
+}
+window.clearHistory = clearHistory;
+
+/* ------------------- Summary & Charts ------------------- */
+function updateSummary() {
+  let total = 0, dept = 0, school = 0;
+  history.forEach(h => {
+    const amt = Number(h.amount) || 0;
+    total += amt;
+    const ft = (h.feeType || "").toLowerCase();
+    if (ft.includes("department")) dept += amt;
+    if (ft.includes("association") || ft.includes("school")) school += amt;
+  });
+  const totalEl = document.getElementById("totalPayments");
+  const deptEl = document.getElementById("totalDept");
+  const schoolEl = document.getElementById("totalSchool");
+  if (totalEl) totalEl.innerText = "₦" + total.toLocaleString();
+  if (deptEl) deptEl.innerText = "₦" + dept.toLocaleString();
+  if (schoolEl) schoolEl.innerText = "₦" + school.toLocaleString();
+}
+
+let myChart = null;
+function renderChart(){
+  const canvas = document.getElementById("paymentChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const deptTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("department")).reduce((s, r) => s + Number(r.amount), 0);
+  const schoolTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("association") || (h.feeType || "").toLowerCase().includes("school")).reduce((s, r) => s + Number(r.amount), 0);
+  const other = history.reduce((s, r) => s + Number(r.amount), 0) - deptTotal - schoolTotal;
+
+  if (myChart) myChart.destroy();
+  myChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Departmental", "Association/School", "Other"],
+      datasets: [{ data: [deptTotal, schoolTotal, other], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+  });
+}
+
+/* ------------------- Profile / Auth helpers ------------------- */
+function saveProfile(){
+  const p = {
+    name: (document.getElementById("profileName")?.value || "").trim(),
+    matric: (document.getElementById("profileMatric")?.value || "").trim(),
+    email: (document.getElementById("profileEmail")?.value || "").trim()
+  };
+  localStorage.setItem("studentProfile", JSON.stringify(p));
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  // prefill payment form
+  if (p.name) document.getElementById("studentName").value = p.name;
+  if (p.matric) document.getElementById("studentMatric").value = p.matric;
+  showNotification("Profile saved locally.");
+}
+window.saveProfile = saveProfile;
+
+function loadProfile(){
+  const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
+  if (!p) return;
+  if (document.getElementById("profileName")) document.getElementById("profileName").value = p.name || "";
+  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = p.matric || "";
+  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = p.email || "";
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";
+  if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";
+}
+window.loadProfile = loadProfile;
+
+function logoutProfile(){
+  localStorage.removeItem("studentProfile");
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";
+  showNotification("Logged out (local profile cleared).");
+}
+window.logoutProfile = logoutProfile;
+
+/* ------------------- Utilities ------------------- */
+function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+function showNotification(msg) {
+  const el = document.getElementById("notificationSection");
+  if (!el) return;
+  document.getElementById("notificationMsg").innerText = msg;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 4500);
+}
+
+/* ------------------- Init on DOM ready ------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  showSection("dashboard");
+  renderHistory();
+  updateSummary();
+  renderChart();
+  loadProfile();
+
+  document.getElementById("studentYear")?.addEventListener("change", updateFees);
+  document.getElementById("paymentType")?.addEventListener("change", updateFees);
+
+  // ensure menu toggle for mobile works
+  document.getElementById("menuToggle")?.addEventListener("click", toggleSidebar);
 });
-  });  
-  handler.openIframe();  
-}  
-window.makePayment = makePayment;  
-  
-/* ------------------- History & Export ------------------- */  
-function renderHistory(){  
-  const tbody = document.getElementById("historyTable");  
-  if (!tbody) return;  
-  tbody.innerHTML = history.map(h => `  
-    <tr class="border-b">  
-      <td class="p-2">${escapeHtml(h.name)}</td>  
-      <td class="p-2">${escapeHtml(h.matric)}</td>  
-      <td class="p-2">${escapeHtml(h.year)}</td>  
-      <td class="p-2">${escapeHtml(h.feeType)}</td>  
-      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>  
-      <td class="p-2">${escapeHtml(h.date)}</td>  
-      <td class="p-2">${escapeHtml(h.reference || "-")}</td>  
-    </tr>`).join("");  
-}  
-  
-function filterHistory(){  
-  const q = (document.getElementById("searchHistory")?.value || "").toLowerCase().trim();  
-  const filtered = history.filter(h =>  
-    h.name.toLowerCase().includes(q) ||  
-    h.matric.toLowerCase().includes(q) ||  
-    String(h.year).includes(q) ||  
-    (h.reference || "").toLowerCase().includes(q)  
-  );  
-  const tbody = document.getElementById("historyTable");  
-  if (!tbody) return;  
-  tbody.innerHTML = filtered.map(h => `  
-    <tr class="border-b">  
-      <td class="p-2">${escapeHtml(h.name)}</td>  
-      <td class="p-2">${escapeHtml(h.matric)}</td>  
-      <td class="p-2">${escapeHtml(h.year)}</td>  
-      <td class="p-2">${escapeHtml(h.feeType)}</td>  
-      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>  
-      <td class="p-2">${escapeHtml(h.date)}</td>  
-      <td class="p-2">${escapeHtml(h.reference || "-")}</td>  
-    </tr>`).join("");  
-}  
-window.filterHistory = filterHistory;  
-  
-function downloadHistoryPDF(){  
-  if (!history.length) return alert("No history to export.");  
-  const { jsPDF } = window.jspdf;  
-  const doc = new jsPDF({ unit: "pt", format: "a4" });  
-  const margin = 40;  
-  let y = 40;  
-  doc.setFontSize(16);  
-  doc.text("PTS Payment History", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });  
-  y += 24;  
-  doc.setFontSize(10);  
-  history.forEach(h => {  
-    const line = `${h.date} | ${h.name} | ${h.matric} | ${h.feeType} | ₦${Number(h.amount).toLocaleString()} | Ref: ${h.reference || "-"}`;  
-    doc.text(line, margin, y);  
-    y += 14;  
-    if (y > doc.internal.pageSize.getHeight() - 60) {  
-      doc.addPage();  
-      y = 40;  
-    }  
-  });  
-  doc.save("PTS_Payment_History.pdf");  
-}  
-window.downloadHistoryPDF = downloadHistoryPDF;  
-  
-function downloadHistoryExcel(){  
-  if (!history.length) return alert("No history available");  
-  // requires SheetJS (you included it). Convert to worksheet then download.  
-  try {  
-    const worksheetData = history.map(h => ({  
-      Date: h.date,  
-      Name: h.name,  
-      Matric: h.matric,  
-      Year: h.year,  
-      FeeType: h.feeType,  
-      Amount: h.amount,  
-      Reference: h.reference || "-"  
-    }));  
-    const ws = XLSX.utils.json_to_sheet(worksheetData);  
-    const wb = XLSX.utils.book_new();  
-    XLSX.utils.book_append_sheet(wb, ws, "History");  
-    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");  
-  } catch (err) {  
-    console.error(err);  
-    alert("❌ Excel export failed.");  
-  }  
-}  
-window.downloadHistoryExcel = downloadHistoryExcel;  
-  
-function clearHistory(){  
-  if (!confirm("Clear local payment history? This will remove local entries.")) return;  
-  history = [];  
-  localStorage.removeItem("paymentHistory");  
-  renderHistory();  
-  updateSummary();  
-  renderChart();  
-}  
-window.clearHistory = clearHistory;  
-  
-/* ------------------- Summary & Charts ------------------- */  
-function updateSummary() {  
-  let total = 0, dept = 0, school = 0;  
-  history.forEach(h => {  
-    const amt = Number(h.amount) || 0;  
-    total += amt;  
-    const ft = (h.feeType || "").toLowerCase();  
-    if (ft.includes("department")) dept += amt;  
-    if (ft.includes("association") || ft.includes("school")) school += amt;  
-  });  
-  const totalEl = document.getElementById("totalPayments");  
-  const deptEl = document.getElementById("totalDept");  
-  const schoolEl = document.getElementById("totalSchool");  
-  if (totalEl) totalEl.innerText = "₦" + total.toLocaleString();  
-  if (deptEl) deptEl.innerText = "₦" + dept.toLocaleString();  
-  if (schoolEl) schoolEl.innerText = "₦" + school.toLocaleString();  
-}  
-  
-let myChart = null;  
-function renderChart(){  
-  const canvas = document.getElementById("paymentChart");  
-  if (!canvas) return;  
-  const ctx = canvas.getContext("2d");  
-  const deptTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("department")).reduce((s, r) => s + Number(r.amount), 0);  
-  const schoolTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("association") || (h.feeType || "").toLowerCase().includes("school")).reduce((s, r) => s + Number(r.amount), 0);  
-  const other = history.reduce((s, r) => s + Number(r.amount), 0) - deptTotal - schoolTotal;  
-  
-  if (myChart) myChart.destroy();  
-  myChart = new Chart(ctx, {  
-    type: "doughnut",  
-    data: {  
-      labels: ["Departmental", "Association/School", "Other"],  
-      datasets: [{ data: [deptTotal, schoolTotal, other], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }]  
-    },  
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }  
-  });  
-}  
-  
-/* ------------------- Profile / Auth helpers ------------------- */  
-function saveProfile(){  
-  const p = {  
-    name: (document.getElementById("profileName")?.value || "").trim(),  
-    matric: (document.getElementById("profileMatric")?.value || "").trim(),  
-    email: (document.getElementById("profileEmail")?.value || "").trim()  
-  };  
-  localStorage.setItem("studentProfile", JSON.stringify(p));  
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";  
-  // prefill payment form  
-  if (p.name) document.getElementById("studentName").value = p.name;  
-  if (p.matric) document.getElementById("studentMatric").value = p.matric;  
-  showNotification("Profile saved locally.");  
-}  
-window.saveProfile = saveProfile;  
-  
-function loadProfile(){  
-  const p = JSON.parse(localStorage.getItem("studentProfile") || "null");  
-  if (!p) return;  
-  if (document.getElementById("profileName")) document.getElementById("profileName").value = p.name || "";  
-  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = p.matric || "";  
-  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = p.email || "";  
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";  
-  if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";  
-  if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";  
-}  
-window.loadProfile = loadProfile;  
-  
-function logoutProfile(){  
-  localStorage.removeItem("studentProfile");  
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";  
-  showNotification("Logged out (local profile cleared).");  
-}  
-window.logoutProfile = logoutProfile;  
-  
-/* ------------------- Utilities ------------------- */  
-function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }  
-  
-/* ------------------- Init on DOM ready ------------------- */  
-document.addEventListener("DOMContentLoaded", () => {  
-  // default visible section  
-  showSection("dashboard");  
-  renderHistory();  
-  updateSummary();  
-  renderChart();  
-  loadProfile();  
-  
-  // wire updateFees when paymentType or studentYear change (safety for pages where those exist)  
-  document.getElementById("studentYear")?.addEventListener("change", updateFees);  
-  document.getElementById("paymentType")?.addEventListener("change", updateFees);  
-});  
 </script>
 </body>
 </html>
