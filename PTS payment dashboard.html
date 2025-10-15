@@ -200,9 +200,8 @@
 
     </main>
   </div>
-  
 <script>
-/* ======= Corrected & Complete App Script ======= */
+/* ======= Corrected & Complete App Script with Split Code ======= */
 
 const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace with your key
 
@@ -212,127 +211,8 @@ const fees = {
   3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
 };
 
-// Example payment function
-function makePayment() {
-  const amount = 10000; // example amount
-  const email = "student@example.com"; // example email
-  const name = "John Doe";
-
-  const handler = PaystackPop.setup({
-    key: PAYSTACK_PUBLIC_KEY,
-    email: email,
-    amount: amount * 100, // Paystack expects kobo
-    currency: "NGN",
-    ref: "PTS_" + Math.floor(Math.random() * 1000000000),
-    metadata: {
-      custom_fields: [
-        { display_name: "Student Name", variable_name: "student_name", value: name }
-      ]
-    },
-
-    // ✅ Correctly placed Split Payment Configuration
-    split: {
-      type: "percentage",
-      bearer_type: "account", // main account bears Paystack fee
-      subaccounts: [
-        {
-          subaccount: "ACCT_x5ze130sh1rjex6", // 1st subaccount
-          share: 97
-        },
-        {
-          subaccount: "ACCT_06hfn80x3hk1neo", // 2nd subaccount
-          share: 2
-        },
-        {
-          subaccount: "ACCT_mumt79bdmmonlnx", // 3rd subaccount
-          share: 1
-        }
-      ]
-    },
-
-    callback: function (response) {
-      alert("✅ Payment successful! Reference: " + response.reference);
-      console.log("Payment successful:", response);
-    },
-
-    onClose: function () {
-      alert("❌ Payment window closed.");
-    }
-  });
-
-  handler.openIframe();
-}
-
-let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-let darkMode = localStorage.getItem("darkMode") === "true";
-if (darkMode) document.body.classList.add("dark");
-
-/* ------------------- UI / Navigation ------------------- */
-function toggleDarkMode() {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-}
-
-function toggleSidebar() {
-  const s = document.getElementById("sidebar");
-  if (s) s.classList.toggle("hidden");
-}
-
-function showNotification(msg) {
-  const el = document.getElementById("notificationSection");
-  if (!el) return;
-  document.getElementById("notificationMsg").innerText = msg;
-  el.classList.remove("hidden");
-  setTimeout(() => el.classList.add("hidden"), 3500);
-}
-
-function showSection(s) {
-  const sections = ["dashboard","payment","history","profile","settings"];
-  sections.forEach(id => {
-    const el = document.getElementById(id + "Section");
-    if (el) el.classList.add("hidden");
-  });
-  const target = document.getElementById(s + "Section");
-  if (target) {
-    target.classList.remove("hidden");
-  } else {
-    console.warn("showSection: target not found:", s + "Section");
-  }
-  // refresh small UI pieces
-  updateSummary();
-  renderChart();
-  renderHistory();
-}
-
-// expose to inline onclick attributes
-window.showSection = showSection;
-window.toggleSidebar = toggleSidebar;
-window.toggleDarkMode = toggleDarkMode;
-
 /* ------------------- Payment / Fees ------------------- */
-function updateFees(){
-  const year = document.getElementById("studentYear")?.value;
-  const type = document.getElementById("paymentType")?.value || "All";
-  const breakdown = document.getElementById("feeBreakdown");
-  if (!breakdown) return;
-  breakdown.innerHTML = "";
-  if (!year) { document.getElementById("totalAmount").value = ""; return; }
-  const items = fees[year] || {};
-  let html = "";
-  let total = 0;
-  Object.entries(items).forEach(([k, v]) => {
-    if (type === "All" || type === k) {
-      html += `<div class="flex justify-between"><span>${k}</span><span>₦${v.toLocaleString()}</span></div>`;
-      total += (type === "All" ? v : (type === k ? v : 0));
-    }
-  });
-  if (type !== "All" && !items[type]) total = 0;
-  breakdown.innerHTML = html + `<hr class="my-2"><div class="flex justify-between font-bold"><div>Total</div><div>₦${total.toLocaleString()}</div></div>`;
-  document.getElementById("totalAmount").value = total;
-}
-window.updateFees = updateFees;
-
-function makePayment(){
+function makePayment() {
   const name = (document.getElementById("studentName")?.value || "").trim();
   const matric = (document.getElementById("studentMatric")?.value || "").trim();
   const year = document.getElementById("studentYear")?.value;
@@ -349,6 +229,7 @@ function makePayment(){
     amount: Math.round(amount * 100),
     currency: "NGN",
     ref: "PTS_" + Math.floor(Math.random() * 1e9),
+    split_code: "SPL_Ijp4pkn553", // ✅ replace with your actual Paystack split code
     metadata: {
       custom_fields: [
         { display_name: "Student Name", variable_name: "student_name", value: name },
@@ -368,11 +249,70 @@ function makePayment(){
       showNotification("❌ Payment window closed.");
     }
   });
+
   handler.openIframe();
 }
 window.makePayment = makePayment;
 
-/* ------------------- History & Export ------------------- */
+/* ------------------- Local Data & UI ------------------- */
+let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+let darkMode = localStorage.getItem("darkMode") === "true";
+if (darkMode) document.body.classList.add("dark");
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+}
+function toggleSidebar() {
+  const s = document.getElementById("sidebar");
+  if (s) s.classList.toggle("hidden");
+}
+function showNotification(msg) {
+  const el = document.getElementById("notificationSection");
+  if (!el) return;
+  document.getElementById("notificationMsg").innerText = msg;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 3500);
+}
+
+function showSection(s) {
+  const sections = ["dashboard","payment","history","profile","settings"];
+  sections.forEach(id => {
+    const el = document.getElementById(id + "Section");
+    if (el) el.classList.add("hidden");
+  });
+  const target = document.getElementById(s + "Section");
+  if (target) target.classList.remove("hidden");
+  updateSummary();
+  renderChart();
+  renderHistory();
+}
+window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+window.toggleDarkMode = toggleDarkMode;
+
+/* ------------------- Fee Calculation ------------------- */
+function updateFees(){
+  const year = document.getElementById("studentYear")?.value;
+  const type = document.getElementById("paymentType")?.value || "All";
+  const breakdown = document.getElementById("feeBreakdown");
+  if (!breakdown) return;
+  breakdown.innerHTML = "";
+  if (!year) { document.getElementById("totalAmount").value = ""; return; }
+  const items = fees[year] || {};
+  let html = "", total = 0;
+  Object.entries(items).forEach(([k, v]) => {
+    if (type === "All" || type === k) {
+      html += `<div class="flex justify-between"><span>${k}</span><span>₦${v.toLocaleString()}</span></div>`;
+      total += v;
+    }
+  });
+  breakdown.innerHTML = html + `<hr class="my-2"><div class="flex justify-between font-bold"><div>Total</div><div>₦${total.toLocaleString()}</div></div>`;
+  document.getElementById("totalAmount").value = total;
+}
+window.updateFees = updateFees;
+
+/* ------------------- History ------------------- */
 function renderHistory(){
   const tbody = document.getElementById("historyTable");
   if (!tbody) return;
@@ -388,102 +328,12 @@ function renderHistory(){
     </tr>`).join("");
 }
 
-function filterHistory(){
-  const q = (document.getElementById("searchHistory")?.value || "").toLowerCase().trim();
-  const filtered = history.filter(h =>
-    h.name.toLowerCase().includes(q) ||
-    h.matric.toLowerCase().includes(q) ||
-    String(h.year).includes(q) ||
-    (h.reference || "").toLowerCase().includes(q)
-  );
-  const tbody = document.getElementById("historyTable");
-  if (!tbody) return;
-  tbody.innerHTML = filtered.map(h => `
-    <tr class="border-b">
-      <td class="p-2">${escapeHtml(h.name)}</td>
-      <td class="p-2">${escapeHtml(h.matric)}</td>
-      <td class="p-2">${escapeHtml(h.year)}</td>
-      <td class="p-2">${escapeHtml(h.feeType)}</td>
-      <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
-      <td class="p-2">${escapeHtml(h.date)}</td>
-      <td class="p-2">${escapeHtml(h.reference || "-")}</td>
-    </tr>`).join("");
-}
-window.filterHistory = filterHistory;
-
-function downloadHistoryPDF(){
-  if (!history.length) return alert("No history to export.");
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const margin = 40;
-  let y = 40;
-  doc.setFontSize(16);
-  doc.text("PTS Payment History", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
-  y += 24;
-  doc.setFontSize(10);
-  history.forEach(h => {
-    const line = `${h.date} | ${h.name} | ${h.matric} | ${h.feeType} | ₦${Number(h.amount).toLocaleString()} | Ref: ${h.reference || "-"}`;
-    doc.text(line, margin, y);
-    y += 14;
-    if (y > doc.internal.pageSize.getHeight() - 60) {
-      doc.addPage();
-      y = 40;
-    }
-  });
-  doc.save("PTS_Payment_History.pdf");
-}
-window.downloadHistoryPDF = downloadHistoryPDF;
-
-function downloadHistoryExcel(){
-  if (!history.length) return alert("No history available");
-  // requires SheetJS (you included it). Convert to worksheet then download.
-  try {
-    const worksheetData = history.map(h => ({
-      Date: h.date,
-      Name: h.name,
-      Matric: h.matric,
-      Year: h.year,
-      FeeType: h.feeType,
-      Amount: h.amount,
-      Reference: h.reference || "-"
-    }));
-    const ws = XLSX.utils.json_to_sheet(worksheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "History");
-    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
-  } catch (err) {
-    console.error(err);
-    alert("❌ Excel export failed.");
-  }
-}
-window.downloadHistoryExcel = downloadHistoryExcel;
-
-function clearHistory(){
-  if (!confirm("Clear local payment history? This will remove local entries.")) return;
-  history = [];
-  localStorage.removeItem("paymentHistory");
-  renderHistory();
-  updateSummary();
-  renderChart();
-}
-window.clearHistory = clearHistory;
-
 /* ------------------- Summary & Charts ------------------- */
 function updateSummary() {
-  let total = 0, dept = 0, school = 0;
-  history.forEach(h => {
-    const amt = Number(h.amount) || 0;
-    total += amt;
-    const ft = (h.feeType || "").toLowerCase();
-    if (ft.includes("department")) dept += amt;
-    if (ft.includes("association") || ft.includes("school")) school += amt;
-  });
+  let total = 0;
+  history.forEach(h => total += Number(h.amount) || 0);
   const totalEl = document.getElementById("totalPayments");
-  const deptEl = document.getElementById("totalDept");
-  const schoolEl = document.getElementById("totalSchool");
   if (totalEl) totalEl.innerText = "₦" + total.toLocaleString();
-  if (deptEl) deptEl.innerText = "₦" + dept.toLocaleString();
-  if (schoolEl) schoolEl.innerText = "₦" + school.toLocaleString();
 }
 
 let myChart = null;
@@ -491,69 +341,33 @@ function renderChart(){
   const canvas = document.getElementById("paymentChart");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  const deptTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("department")).reduce((s, r) => s + Number(r.amount), 0);
-  const schoolTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("association") || (h.feeType || "").toLowerCase().includes("school")).reduce((s, r) => s + Number(r.amount), 0);
-  const other = history.reduce((s, r) => s + Number(r.amount), 0) - deptTotal - schoolTotal;
-
+  const totals = history.reduce((acc, h) => {
+    const ft = h.feeType.toLowerCase();
+    if (ft.includes("department")) acc.dept += Number(h.amount);
+    else if (ft.includes("association") || ft.includes("school")) acc.school += Number(h.amount);
+    else acc.other += Number(h.amount);
+    return acc;
+  }, {dept: 0, school: 0, other: 0});
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: "doughnut",
-    data: {
-      labels: ["Departmental", "Association/School", "Other"],
-      datasets: [{ data: [deptTotal, schoolTotal, other], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }]
+    data: { labels: ["Departmental", "School/Association", "Other"],
+      datasets: [{ data: [totals.dept, totals.school, totals.other] }]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } }
   });
 }
-
-/* ------------------- Profile / Auth helpers ------------------- */
-function saveProfile(){
-  const p = {
-    name: (document.getElementById("profileName")?.value || "").trim(),
-    matric: (document.getElementById("profileMatric")?.value || "").trim(),
-    email: (document.getElementById("profileEmail")?.value || "").trim()
-  };
-  localStorage.setItem("studentProfile", JSON.stringify(p));
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
-  // prefill payment form
-  if (p.name) document.getElementById("studentName").value = p.name;
-  if (p.matric) document.getElementById("studentMatric").value = p.matric;
-  showNotification("Profile saved locally.");
-}
-window.saveProfile = saveProfile;
-
-function loadProfile(){
-  const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
-  if (!p) return;
-  if (document.getElementById("profileName")) document.getElementById("profileName").value = p.name || "";
-  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = p.matric || "";
-  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = p.email || "";
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
-  if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";
-  if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";
-}
-window.loadProfile = loadProfile;
-
-function logoutProfile(){
-  localStorage.removeItem("studentProfile");
-  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";
-  showNotification("Logged out (local profile cleared).");
-}
-window.logoutProfile = logoutProfile;
 
 /* ------------------- Utilities ------------------- */
 function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
 
-/* ------------------- Init on DOM ready ------------------- */
+/* ------------------- Init ------------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  // default visible section
   showSection("dashboard");
   renderHistory();
   updateSummary();
   renderChart();
   loadProfile();
-
-  // wire updateFees when paymentType or studentYear change (safety for pages where those exist)
   document.getElementById("studentYear")?.addEventListener("change", updateFees);
   document.getElementById("paymentType")?.addEventListener("change", updateFees);
 });
