@@ -566,18 +566,8 @@ async function makePayment() {
     },
   });
 }
-
-  // open iframe
-  try {
-    handler.openIframe();
-  } catch (err) {
-    console.error("Paystack openIframe error:", err);
-    setPaySpinner(false);
-    alert("Could not open Paystack payment window. Check console for details.");
-  }
-}
-
-/* ------------------- Receipt generation (jsPDF) ------------------- */
+  
+//a ------------------- Receipt generation (jsPDF) ------------------- */
 async function generateReceiptPDF(record, returnBlob = false) {
   try {
     const { jsPDF } = window.jspdf;
