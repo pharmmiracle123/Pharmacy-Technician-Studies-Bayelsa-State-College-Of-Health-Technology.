@@ -488,8 +488,7 @@ function setPaySpinner(on) {
   }
 }
 
-async function makePayment(){
-  // Basic client validation
+async function makePayment() {
   const name = ($("studentName").value || "").trim();
   const matric = ($("studentMatric").value || "").trim();
   const year = $("studentYear").value;
@@ -498,109 +497,75 @@ async function makePayment(){
   const email = ($("profileEmail").value || `${matric}@pts.edu.ng`).trim();
 
   if (!name || !matric || !year || amount <= 0) {
-    return alert("⚠ Please fill all fields and ensure amount > 0");
-  }
-
-  // check Paystack object exists
-  if (!window.PaystackPop && !window.paystackpop && !window.Paystack) {
-    alert("Paystack inline library not loaded. Confirm internet connection and that https://js.paystack.co/v1/inline.js is reachable.");
+    alert("⚠ Please fill all fields and ensure amount > 0");
     return;
   }
 
   setPaySpinner(true);
 
-  const reference = "PTS_" + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36);
+  const reference = "PTS_" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
 
-  // Use window.PaystackPop if available (older variable names)
-  const Paystack = window.PaystackPop || window.paystackpop || window.Paystack || window.PaystackInline || null;
-
-  if (!Paystack || typeof Paystack.setup !== "function") {
-    setPaySpinner(false);
-    alert("Paystack inline integration not available. Check browser console.");
-    return;
-  }
-
-  const handler = Paystack.setup({
-    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878", // ✅ Your live public key
-  email: email,
-  amount: Math.round(amount * 100), // convert to kobo
-  currency: "NGN",
-  ref: "PTS_" + Math.floor(Math.random() * 1000000000), // unique transaction reference
-  split_code: "SPL_Ijp4pkn553", // ✅ Your Paystack Split Code
+  // ✅ This is the correct way (v1/inline.js)
+  const paystack = new PaystackPop();
+  paystack.newTransaction({
+    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878", // your public key
+    email: email,
+    amount: Math.round(amount * 100), // amount in kobo
+    currency: "NGN",
+    ref: reference,
+    split_code: "SPL_Ijp4pkn553",
     metadata: {
       custom_fields: [
         { display_name: "Student Name", variable_name: "student_name", value: name },
-        { display_name: "Matric No", variable_name: "matric", value: matric }
+        { display_name: "Matric No", variable_name: "matric", value: matric },
+        { display_name: "Year", variable_name: "year", value: year },
+        { display_name: "Fee Type", variable_name: "fee_type", value: type }
       ]
     },
-    callback: async (res) => {
+    onSuccess: async function (res) {
+      setPaySpinner(false);
+      announce("✅ Payment successful! Ref: " + res.reference);
+
+      // Save record locally and to Firestore
+      const record = {
+        name,
+        matric,
+        year,
+        feeType: type,
+        amount,
+        date: new Date().toISOString(),
+        reference: res.reference,
+        status: "SUCCESS",
+        payerEmail: email,
+        createdAt: serverTimestamp()
+      };
+
+      history.push(record);
+      localStorage.setItem("paymentHistory", JSON.stringify(history));
+      renderHistory();
+      updateSummary();
+      renderChart();
+
       try {
-        // build record
-        const record = {
-          name,
-          matric,
-          year,
-          feeType: type,
-          amount,
-          date: new Date().toISOString(),
-          reference: res.reference || reference,
-          status: "SUCCESS",
-          payerEmail: email,
-          createdAt: serverTimestamp()
-        };
+        const docRef = currentUser
+          ? await addDoc(collection(db, "users", currentUser.uid, "payments"), record)
+          : await addDoc(collection(db, "guest_payments"), record);
 
-        // local history (instant)
-        history.push(record);
-        localStorage.setItem("paymentHistory", JSON.stringify(history));
-        renderHistory();
-        updateSummary();
-        renderChart();
-
-        // save to Firestore
-        try {
-          let docRef;
-          if (currentUser && currentUser.uid) {
-            docRef = await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
-          } else {
-            docRef = await addDoc(collection(db, "guest_payments"), record);
-          }
-
-          // generate PDF and upload (attempt)
-          try {
-            const { blob, filename } = await generateReceiptPDF(record, true);
-            const path = `receipts/${docRef.id}/${filename}`;
-            const sRef = storageRef(storage, path);
-            await uploadBytes(sRef, blob);
-            const receiptUrl = await getDownloadURL(sRef);
-            await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl }, { merge: true });
-          } catch (upErr) {
-            console.warn("Receipt upload failed:", upErr);
-          }
-
-          // Try to call a cloud function to send email (if deployed)
-          try {
-            const sendReceipt = httpsCallable(functions, 'sendReceiptEmail');
-            await sendReceipt({ email: record.payerEmail, name: record.name, reference: record.reference });
-          } catch (fnErr) {
-            console.warn("sendReceiptEmail not available or failed:", fnErr);
-          }
-        } catch (dbErr) {
-          console.warn("Could not save to Firestore:", dbErr);
-        }
-
-        setPaySpinner(false);
-        announce("✅ Payment successful! Ref: " + (res.reference || reference));
+        const { blob, filename } = await generateReceiptPDF(record, true);
+        const sRef = storageRef(storage, `receipts/${docRef.id}/${filename}`);
+        await uploadBytes(sRef, blob);
+        const url = await getDownloadURL(sRef);
+        await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl: url }, { merge: true });
       } catch (err) {
-        console.error("Error in callback:", err);
-        setPaySpinner(false);
-        announce("⚠ Payment succeeded but client post-processing failed.");
+        console.warn("Firestore save error:", err);
       }
     },
-    onClose: () => {
+    onCancel: function () {
       setPaySpinner(false);
-      announce("❌ Payment window closed.");
-    }
+      announce("❌ Payment cancelled by user.");
+    },
   });
+}
 
   // open iframe
   try {
