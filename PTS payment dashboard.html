@@ -228,14 +228,14 @@ const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553"; // configured in Paystack dashboar
   To get this, open Firebase Console > Project Settings > SDK setup and configuration
 */
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOURS",
-  authDomain: "REPLACE_WITH_YOURS.firebaseapp.com",
-  projectId: "REPLACE_WITH_YOURS",
-  storageBucket: "REPLACE_WITH_YOURS.appspot.com",
-  messagingSenderId: "REPLACE_WITH_YOURS",
-  appId: "REPLACE_WITH_YOURS"
+  apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
+  authDomain: "pts-bscht.firebaseapp.com",
+  projectId: "pts-bscht",
+  storageBucket: "pts-bscht.firebasestorage.app",
+  messagingSenderId: "860500545291",
+  appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
+  measurementId: "G-B9NTEZYFMM"
 };
-
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -346,12 +346,12 @@ async function makePayment(){
 
   // Setup Paystack inline - split_code included (server-side split configured in dashboard).
   const handler = PaystackPop.setup({
-    key: PAYSTACK_PUBLIC_KEY,
+    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",
     email,
     amount: Math.round(amount * 100), // kobo
     currency: "NGN",
     ref: reference,
-    split_code: PAYSTACK_SPLIT_CODE,
+    split_code: "SPL_Ijp4pkn553",
     metadata: {
       custom_fields: [
         { display_name: "Student Name", variable_name: "student_name", value: name },
@@ -407,7 +407,7 @@ async function makePayment(){
         // Below is a client-side fetch to your function endpoint:
         const SEND_EMAIL_FUNCTION_URL = "https://us-central1-YOUR_PROJECT.cloudfunctions.net/sendReceiptEmail"; // <-- replace
         // Uncomment and replace with your own function URL
-        /*
+        
         try {
           await fetch(SEND_EMAIL_FUNCTION_URL, {
             method: "POST",
@@ -700,6 +700,126 @@ function downloadHistoryExcel(){
     }));
     const ws = XLSX.utils.json_to_sheet(worksheetData);
     const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Excel export failed.");
+  }
+}
+window.downloadHistoryExcel = downloadHistoryExcel;
+
+function clearHistory(){
+  if (!confirm("Clear local payment history? This will remove local entries.")) return;
+  history = [];
+  localStorage.removeItem("paymentHistory");
+  renderHistory();
+  updateSummary();
+  renderChart();
+}
+window.clearHistory = clearHistory;
+
+/* ------------------- Summary & Charts ------------------- */
+function updateSummary() {
+  let total = 0, dept = 0, school = 0;
+  history.forEach(h => {
+    const amt = Number(h.amount) || 0;
+    total += amt;
+    const ft = (h.feeType || "").toLowerCase();
+    if (ft.includes("department")) dept += amt;
+    if (ft.includes("association") || ft.includes("school")) school += amt;
+  });
+  const totalEl = document.getElementById("totalPayments");
+  const deptEl = document.getElementById("totalDept");
+  const schoolEl = document.getElementById("totalSchool");
+  if (totalEl) totalEl.innerText = "₦" + total.toLocaleString();
+  if (deptEl) deptEl.innerText = "₦" + dept.toLocaleString();
+  if (schoolEl) schoolEl.innerText = "₦" + school.toLocaleString();
+}
+
+let myChart = null;
+function renderChart(){
+  const canvas = document.getElementById("paymentChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const deptTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("department")).reduce((s, r) => s + Number(r.amount), 0);
+  const schoolTotal = history.filter(h => (h.feeType || "").toLowerCase().includes("association") || (h.feeType || "").toLowerCase().includes("school")).reduce((s, r) => s + Number(r.amount), 0);
+  const other = history.reduce((s, r) => s + Number(r.amount), 0) - deptTotal - schoolTotal;
+
+  if (myChart) myChart.destroy();
+  myChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Departmental", "Association/School", "Other"],
+      datasets: [{ data: [deptTotal, schoolTotal, other], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+  });
+}
+
+/* ------------------- Profile / Auth helpers ------------------- */
+function saveProfile(){
+  const p = {
+    name: (document.getElementById("profileName")?.value || "").trim(),
+    matric: (document.getElementById("profileMatric")?.value || "").trim(),
+    email: (document.getElementById("profileEmail")?.value || "").trim()
+  };
+  localStorage.setItem("studentProfile", JSON.stringify(p));
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  // prefill payment form
+  if (p.name) document.getElementById("studentName").value = p.name;
+  if (p.matric) document.getElementById("studentMatric").value = p.matric;
+  showNotification("Profile saved locally.");
+}
+window.saveProfile = saveProfile;
+
+function loadProfile(){
+  const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
+  if (!p) return;
+  if (document.getElementById("profileName")) document.getElementById("profileName").value = p.name || "";
+  if (document.getElementById("profileMatric")) document.getElementById("profileMatric").value = p.matric || "";
+  if (document.getElementById("profileEmail")) document.getElementById("profileEmail").value = p.email || "";
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
+  if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";
+  if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";
+}
+window.loadProfile = loadProfile;
+
+function logoutProfile(){
+  localStorage.removeItem("studentProfile");
+  if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";
+  showNotification("Logged out (local profile cleared).");
+}
+window.logoutProfile = logoutProfile;
+
+/* ------------------- Utilities ------------------- */
+function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+function showNotification(msg) {
+  const el = document.getElementById("notificationSection");
+  if (!el) return;
+  document.getElementById("notificationMsg").innerText = msg;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 4500);
+}
+
+/* ------------------- Init on DOM ready ------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  showSection("dashboard");
+  renderHistory();
+  updateSummary();
+  renderChart();
+  loadProfile();
+
+  document.getElementById("studentYear")?.addEventListener("change", updateFees);
+  document.getElementById("paymentType")?.addEventListener("change", updateFees);
+
+  // ensure menu toggle for mobile works
+  document.getElementById("menuToggle")?.addEventListener("click", toggleSidebar);
+});
+</script>
+</body>
+</html>    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "History");
     XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
   } catch (err) {
