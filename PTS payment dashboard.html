@@ -482,15 +482,12 @@ async function makePayment(){
 
     // Create Paystack handler using PaystackPop.setup
     const handler = PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
+      key: PAYSTACK_PUBLIC_KEY =  "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
       email: email,
       amount: Math.round(amount * 100), // kobo
       currency: "NGN",
       ref: reference,
-      split_code: PAYSTACK_SPLIT_CODE = "SPL_6x7h2k5jabcde"; // your real split code from Paystack
-
-
-      
+      split_code: PAYSTACK_SPLIT_CODE = "SPL_6x7h2k5jabcde"; // Replace with your real split code
       metadata: {
         custom_fields: [
           { display_name: "Student Name", variable_name: "student_name", value: name },
