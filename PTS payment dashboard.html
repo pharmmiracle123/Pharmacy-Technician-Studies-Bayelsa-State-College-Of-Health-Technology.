@@ -20,13 +20,6 @@
   <!-- Paystack -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
-  <!-- Firebase (compat for simpler browser usage) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-functions-compat.js"></script>
-
   <style>
     .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; white-space: pre-wrap; }
   </style>
@@ -38,23 +31,26 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
       <div class="flex items-center gap-3 mb-6">
-        <img id="logoSmall" src="logo.png" alt="logo" class="w-12 h-12 object-contain bg-white rounded p-1"/>
+        <!-- ADD LOGO URL HERE: set the src to your logo link -->
+        <img id="logoSmall" src="" alt="logo" class="w-12 h-12 object-contain bg-white rounded p-1"/>
         <h2 class="text-2xl font-bold">PTS Payments</h2>
       </div>
 
       <nav class="mt-4">
         <ul class="space-y-3">
-          <li><button onclick="showSection('dashboard')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard</button></li>
-          <li><button onclick="showSection('payment')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">💳 Make Payment</button></li>
-          <li><button onclick="showSection('history')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📜 Payment History</button></li>
-          <li><button onclick="showSection('profile')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
-          <li><button onclick="showSection('settings')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">⚙ Settings</button></li>
+          <li><button id="navDashboard" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard</button></li>
+          <li><button id="navPayment" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">💳 Make Payment</button></li>
+          <li><button id="navHistory" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📜 Payment History</button></li>
+          <li><button id="navProfile" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
+          <li><button id="navSettings" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">⚙ Settings</button></li>
+          <!-- Admin dashboard button (hidden unless admin) -->
+          <li id="navAdminLi" class="hidden"><button id="navAdmin" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📊 Admin</button></li>
         </ul>
       </nav>
 
       <div class="mt-8 space-y-3">
-        <button onclick="toggleDarkMode()" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
-        <button onclick="logoutProfile()" class="w-full bg-red-600 text-white py-2 rounded">🚪 Logout</button>
+        <button id="darkToggle" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
+        <button id="logoutBtn" class="w-full bg-red-600 text-white py-2 rounded">🚪 Logout</button>
       </div>
     </aside>
 
@@ -64,7 +60,8 @@
       <!-- Header -->
       <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
         <div class="flex items-center gap-4">
-          <img id="logoHeader" src="logo.png" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
+          <!-- ADD LOGO URL HERE: set the src to your logo link -->
+          <img id="logoHeader" src="" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
           <div>
             <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
             <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
@@ -72,10 +69,10 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <button id="menuToggle" onclick="toggleSidebar()" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
+          <button id="menuToggle" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
           <div class="text-right">
             <div id="userNameDisplay" class="text-sm text-gray-600 dark:text-gray-200">Not signed in</div>
-            <div class="text-xs text-gray-400">PTS Payment System</div>
+            <div id="userRoleDisplay" class="text-xs text-gray-400">PTS Payment System</div>
           </div>
         </div>
       </header>
@@ -199,8 +196,35 @@
           <input id="profileEmail" placeholder="Email Address" type="email" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" />
         </div>
         <div class="mt-4 flex gap-3">
-          <button onclick="saveProfile()" class="bg-purple-700 text-white px-4 py-2 rounded">Save Profile</button>
-          <button onclick="logoutProfile()" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+          <button id="saveProfileBtn" class="bg-purple-700 text-white px-4 py-2 rounded">Save Profile</button>
+          <button id="logoutProfileBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+        </div>
+      </section>
+
+      <!-- Admin (hidden by default) -->
+      <section id="adminSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
+        <h2 class="text-lg font-bold text-blue-900 mb-4">🔒 Admin Dashboard</h2>
+        <div class="mb-4 flex gap-3">
+          <button id="refreshAllPayments" class="bg-blue-700 text-white px-4 py-2 rounded">Refresh</button>
+          <button id="exportAllPayments" class="bg-green-600 text-white px-4 py-2 rounded">Export CSV</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table id="adminTable" class="w-full table-auto text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="p-2 text-left">Date</th>
+                <th class="p-2 text-left">Name</th>
+                <th class="p-2 text-left">Matric</th>
+                <th class="p-2 text-left">Year</th>
+                <th class="p-2 text-left">Fee Type</th>
+                <th class="p-2 text-left">Amount</th>
+                <th class="p-2 text-left">Ref</th>
+                <th class="p-2 text-left">Receipt</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody" class="bg-white dark:bg-gray-800"></tbody>
+          </table>
         </div>
       </section>
 
@@ -213,20 +237,28 @@
     </main>
   </div>
 
-<!-- ========================= SCRIPT ========================= -->
-<script>
-/* ======= Finalized App Script (extended with Firebase) ======= */
-
-/* --------------------- PAYSTACK / SPLIT --------------------- */
-// Put your Paystack public key and split code here (already provided by you)
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
-const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553"; // configured in Paystack dashboard
-
-/* ---------------------- FIREBASE CONFIG --------------------- */
+<!-- ========================= SCRIPT (module) ========================= -->
+<script type="module">
 /*
-  IMPORTANT: Replace with your Firebase project's config below.
-  To get this, open Firebase Console > Project Settings > SDK setup and configuration
+  Full client-side behavior using Firebase modular SDK v11 and Paystack inline.
+  - Uses your Firebase config and Paystack keys you've provided earlier.
+  - Leave the Cloud Function URL placeholders and webhook info to be implemented server-side.
 */
+
+/* --------------------- CONFIG & KEYS (as requested) --------------------- */
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
+const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553";
+
+// Firebase modular imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, doc, setDoc, getDocs, query, where, orderBy, limit, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-functions.js";
+
+/* --------------------- FIREBASE CONFIG (user supplied) --------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
   authDomain: "pts-bscht.firebaseapp.com",
@@ -236,48 +268,57 @@ const firebaseConfig = {
   appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
   measurementId: "G-B9NTEZYFMM"
 };
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const storage = firebase.storage();
-const functions = firebase.functions();
 
-/* ------------------ OPTIONAL: SIGN-IN ANON (SIMPLE) ------------------
- If you want users to have a per-user dashboard, enable Firebase Authentication.
- The code below signs users in anonymously so payments can be tied to an uid.
- -------------------------------------------------------------------- */
-let currentUser = null;
-auth.onAuthStateChanged(u => {
-  currentUser = u;
-  if (u) {
-    // user signed in (anonymous or real)
-    console.log("Firebase auth user:", u.uid, u.isAnonymous ? "(anonymous)" : "");
-    if (document.getElementById("userNameDisplay")) {
-      const p = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
-      document.getElementById("userNameDisplay").innerText = p.name || (u.isAnonymous ? "Guest" : "User");
-    }
-  } else {
-    // sign in anonymously
-    auth.signInAnonymously().catch(err => {
-      console.error("Anonymous sign-in failed:", err);
-    });
-  }
-});
+/* --------------------- INIT FIREBASE --------------------- */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+const functions = getFunctions(app);
 
-/* ------------------- Fee structure ------------------- */
+/* --------------------- ADMIN CONFIG ---------------------
+   Add the admin emails (or uids) that should be allowed to see the admin dashboard.
+*/
+const ADMIN_EMAILS = ["admin@pts.edu.ng"]; // <-- replace with actual admin email(s)
+
+/* --------------------- Fee structure --------------------- */
 const fees = {
   1: { "Course enrollment": 200, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
 };
 
-/* ------------------- Local data ------------------- */
+/* ------------------- Local state ------------------- */
 let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-let darkMode = localStorage.getItem("darkMode") === "true";
-if (darkMode) document.body.classList.add("dark");
+let currentUser = null;
 
-/* ------------------- UI / Navigation ------------------- */
+/* ------------------- MENU & NAV FIXES ------------------- */
+function ensureNavButtons() {
+  // wire up nav buttons (we added ids)
+  document.getElementById("navDashboard").addEventListener("click", () => showSection("dashboard"));
+  document.getElementById("navPayment").addEventListener("click", () => showSection("payment"));
+  document.getElementById("navHistory").addEventListener("click", () => showSection("history"));
+  document.getElementById("navProfile").addEventListener("click", () => showSection("profile"));
+  document.getElementById("navSettings").addEventListener("click", () => showSection("settings"));
+  document.getElementById("navAdmin")?.addEventListener("click", () => showSection("admin"));
+
+  // mobile menu toggle
+  document.getElementById("menuToggle").addEventListener("click", toggleSidebar);
+  document.getElementById("darkToggle").addEventListener("click", toggleDarkMode);
+  document.getElementById("logoutBtn").addEventListener("click", logoutProfile);
+  document.getElementById("saveProfileBtn").addEventListener("click", saveProfile);
+  document.getElementById("logoutProfileBtn").addEventListener("click", logoutProfile);
+
+  // admin controls
+  document.getElementById("refreshAllPayments").addEventListener("click", loadAllPaymentsForAdmin);
+  document.getElementById("exportAllPayments").addEventListener("click", exportAdminCSV);
+}
+
+/* ensure logo placeholders are left empty so user can paste their logo link */
+document.getElementById("logoHeader").src = ""; // <-- paste your logo URL here
+document.getElementById("logoSmall").src = "";  // <-- paste your logo URL here
+
+/* ------------------- UI Helpers ------------------- */
 function toggleDarkMode() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
@@ -285,12 +326,21 @@ function toggleDarkMode() {
 
 function toggleSidebar() {
   const s = document.getElementById("sidebar");
-  if (s) s.classList.toggle("hidden");
+  if (!s) return;
+  s.classList.toggle("hidden");
 }
 
-/* showSection fixed to always work: */
+function showNotification(msg) {
+  const el = document.getElementById("notificationSection");
+  if (!el) return;
+  document.getElementById("notificationMsg").innerText = msg;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 4000);
+}
+
+/* showSection implementation - keeps HTML untouched */
 function showSection(s) {
-  const sections = ["dashboard","payment","history","profile","settings"];
+  const sections = ["dashboard","payment","history","profile","settings","admin"];
   sections.forEach(id => {
     const el = document.getElementById(id + "Section");
     if (el) el.classList.add("hidden");
@@ -301,11 +351,8 @@ function showSection(s) {
   renderChart();
   renderHistory();
 }
-window.showSection = showSection;
-window.toggleSidebar = toggleSidebar;
-window.toggleDarkMode = toggleDarkMode;
 
-/* ------------------- Payment / Fees ------------------- */
+/* ------------------- Fees UI ------------------- */
 function updateFees(){
   const year = document.getElementById("studentYear")?.value;
   const type = document.getElementById("paymentType")?.value || "All";
@@ -327,9 +374,8 @@ function updateFees(){
   const totalEl = document.getElementById("totalAmount");
   if (totalEl) totalEl.value = total;
 }
-window.updateFees = updateFees;
 
-/* ------------------- Make Payment (Paystack + Firebase) ------------------- */
+/* ------------------- PAYSTACK PAYMENT FLOW ------------------- */
 async function makePayment(){
   const name = (document.getElementById("studentName")?.value || "").trim();
   const matric = (document.getElementById("studentMatric")?.value || "").trim();
@@ -342,16 +388,16 @@ async function makePayment(){
     return alert("⚠ Please fill all fields and ensure amount > 0");
   }
 
+  // unique reference
   const reference = "PTS_" + Math.floor(Math.random() * 1e9);
 
-  // Setup Paystack inline - split_code included (server-side split configured in dashboard).
   const handler = PaystackPop.setup({
-    key: "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878",
+    key: PAYSTACK_PUBLIC_KEY,
     email,
     amount: Math.round(amount * 100), // kobo
     currency: "NGN",
     ref: reference,
-    split_code: "SPL_Ijp4pkn553",
+    split_code: PAYSTACK_SPLIT_CODE,
     metadata: {
       custom_fields: [
         { display_name: "Student Name", variable_name: "student_name", value: name },
@@ -359,7 +405,7 @@ async function makePayment(){
       ]
     },
     callback: async (res) => {
-      // On success: build record, save to Firestore, and generate/upload receipt
+      // Payment succeeded on Paystack side - now save to Firestore and handle receipt
       const record = {
         name,
         matric,
@@ -370,54 +416,45 @@ async function makePayment(){
         reference: res.reference,
         status: "SUCCESS",
         payerEmail: email,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: serverTimestamp()
       };
 
       try {
-        // Save to local history for instant UI & fallback
+        // push to local history for instant UI
         history.push(record);
         localStorage.setItem("paymentHistory", JSON.stringify(history));
         renderHistory();
         updateSummary();
         renderChart();
 
-        // Save to Firestore (per user or guest)
-        const uid = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : null;
+        // save to Firestore
         let docRef;
-        if (uid) {
-          docRef = await db.collection("users").doc(uid).collection("payments").add(record);
+        if (currentUser && currentUser.uid) {
+          docRef = await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
         } else {
-          docRef = await db.collection("guest_payments").add(record);
+          docRef = await addDoc(collection(db, "guest_payments"), record);
         }
-        console.log("Saved payment to Firestore at:", docRef.id);
 
-        // Generate receipt PDF (returns blob)
+        // generate receipt PDF blob
         const { blob, filename } = await generateReceiptPDF(record, true);
 
-        // Upload receipt to Firebase Storage and get URL
-        const receiptUrl = await uploadReceiptToStorage(blob, filename, docRef.id);
-        console.log("Receipt uploaded:", receiptUrl);
+        // upload to storage
+        const path = `receipts/${docRef.id}/${filename}`;
+        const sRef = storageRef(storage, path);
+        await uploadBytes(sRef, blob);
+        const receiptUrl = await getDownloadURL(sRef);
 
-        // Update Firestore record with receipt URL and storage path
-        await docRef.update({ receiptUrl, storagePath: `receipts/${docRef.id}/${filename}` });
+        // update Firestore doc with receiptUrl
+        await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl }, { merge: true });
 
-        // Try to trigger an email via Cloud Function (placeholder)
-        // Replace SEND_EMAIL_FUNCTION_URL with your deployed function endpoint
-        // or implement a callable Cloud Function and use functions.httpsCallable('sendReceipt')(...)
-        // Below is a client-side fetch to your function endpoint:
-        const SEND_EMAIL_FUNCTION_URL = "https://us-central1-YOUR_PROJECT.cloudfunctions.net/sendReceiptEmail"; // <-- replace
-        // Uncomment and replace with your own function URL
-        
+        // call callable cloud function to send email (must implement server-side)
         try {
-          await fetch(SEND_EMAIL_FUNCTION_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: record.payerEmail, name: record.name, reference: record.reference, receiptUrl })
-          });
-        } catch (e) {
-          console.warn("Email send request failed (implement Cloud Function to send email):", e);
+          const sendReceipt = httpsCallable(functions, 'sendReceiptEmail'); // implement this function
+          await sendReceipt({ email: record.payerEmail, name: record.name, reference: record.reference, receiptUrl });
+        } catch (fnErr) {
+          // function may not be deployed yet
+          console.warn("sendReceiptEmail function call failed (deploy function to send email):", fnErr);
         }
-        */
 
         showNotification("✅ Payment successful! Ref: " + res.reference);
       } catch (err) {
@@ -432,15 +469,12 @@ async function makePayment(){
 
   handler.openIframe();
 }
-window.makePayment = makePayment;
 
-/* ------------------- Receipt Generation (jsPDF) ------------------- */
+/* ------------------- Receipt generation (jsPDF) ------------------- */
 /**
  * generateReceiptPDF(record, returnBlob)
- *  - record: payment record used to fill the receipt
- *  - returnBlob (bool): if true, returns { blob, filename } instead of saving locally
- *
- * The receipt design uses the #logoHeader img as logo so it's editable by changing that src.
+ * - returns { blob, filename } when returnBlob = true
+ * - uses logoHeader src if provided
  */
 async function generateReceiptPDF(record, returnBlob = false) {
   try {
@@ -450,7 +484,7 @@ async function generateReceiptPDF(record, returnBlob = false) {
     const margin = 40;
     let y = 40;
 
-    // Load logo (if present) as dataURL
+    // attempt to convert header logo to dataURL for embedding
     const logoImg = document.getElementById("logoHeader");
     let logoDataUrl = null;
     if (logoImg && logoImg.src) {
@@ -461,28 +495,23 @@ async function generateReceiptPDF(record, returnBlob = false) {
       }
     }
 
-    // Header
-    if (logoDataUrl) {
-      const maxLogoWidth = 120;
-      doc.addImage(logoDataUrl, "PNG", margin, y, maxLogoWidth, 40);
-    }
+    if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, y, 100, 40);
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.text("PTS Payment Receipt", pageWidth - margin, y + 18, { align: "right" });
     y += 60;
 
-    // Subheader & reference
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date(record.date).toLocaleString()}`, margin, y);
     doc.text(`Reference: ${record.reference}`, pageWidth - margin, y, { align: "right" });
     y += 22;
 
-    // Payment details box
+    // box with details
     doc.setDrawColor(200);
-    doc.rect(margin, y, pageWidth - margin * 2, 120, "S");
-    let boxY = y + 16;
-    const labelX = margin + 8;
+    doc.rect(margin, y, pageWidth - margin*2, 120, "S");
+    let boxY = y + 20;
+    const labelX = margin + 12;
     const valX = pageWidth / 2;
     doc.setFontSize(11);
 
@@ -506,27 +535,23 @@ async function generateReceiptPDF(record, returnBlob = false) {
     doc.text(`₦${Number(record.amount).toLocaleString()}`, valX, boxY);
     boxY += 20;
 
-    y += 140;
+    y += 150;
 
-    // Notes
     doc.setFontSize(10);
     doc.text("Notes:", margin, y);
     y += 14;
     doc.setFontSize(9);
-    const noteLines = doc.splitTextToSize("This is an autogenerated receipt. For official verification, check the transaction on Paystack using the reference or contact the bursary. The receipt design is editable via the site's logo and the generateReceiptPDF function.", pageWidth - margin * 2);
+    const noteLines = doc.splitTextToSize("This is an autogenerated receipt. For official verification, check the transaction on Paystack using the reference or contact the bursary. The receipt design is editable via the site's logo and the generateReceiptPDF function.", pageWidth - margin*2);
     doc.text(noteLines, margin, y);
     y += noteLines.length * 12 + 20;
 
-    // Signature
     doc.setFontSize(11);
     doc.text("__________________", margin, y);
     doc.text("Authorized Signature", margin, y + 14);
 
-    // Footer small
     doc.setFontSize(8);
     doc.text(`Receipt generated by PTS Payments • Ref: ${record.reference}`, margin, doc.internal.pageSize.getHeight() - 30);
 
-    // filename
     const filename = `Receipt_${(record.matric || "unknown")}_${record.reference}.pdf`;
 
     if (returnBlob) {
@@ -542,13 +567,13 @@ async function generateReceiptPDF(record, returnBlob = false) {
   }
 }
 
-/* helper: convert image url to dataURL (for jsPDF) */
+/* helper to convert image URL to dataURL */
 function imgToDataURL(url) {
   return new Promise((resolve, reject) => {
-    // if already data:, return immediately
+    if (!url) return resolve(null);
     if (url.startsWith("data:")) return resolve(url);
     const img = new Image();
-    img.crossOrigin = "Anonymous";
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -564,42 +589,20 @@ function imgToDataURL(url) {
     };
     img.onerror = (e) => reject(e);
     img.src = url;
-    // in case of cached image blocking crossOrigin load
-    if (img.complete) {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        const dataURL = canvas.toDataURL("image/png");
-        resolve(dataURL);
-      } catch (e) {
-        // fallback to rejecting; still ok
-      }
-    }
   });
 }
 
-/* ------------------- Upload receipt to Firebase Storage ------------------- */
-async function uploadReceiptToStorage(blob, filename, docId) {
-  try {
-    const path = `receipts/${docId}/${filename}`;
-    const storageRef = storage.ref().child(path);
-    const snapshot = await storageRef.put(blob);
-    const url = await snapshot.ref.getDownloadURL();
-    return url;
-  } catch (err) {
-    console.error("Failed to upload receipt:", err);
-    throw err;
-  }
+/* ------------------- Upload helper (Storage) ------------------- */
+async function uploadBlobToStorage(blob, path) {
+  const sRef = storageRef(storage, path);
+  const result = await uploadBytes(sRef, blob);
+  return await getDownloadURL(result.ref);
 }
 
-/* ------------------- History & Export ------------------- */
+/* ------------------- History & Exports ------------------- */
 function renderHistory(){
   const tbody = document.getElementById("historyTable");
   if (!tbody) return;
-  // If Firestore used, try to load latest from Firestore (optional)
   tbody.innerHTML = history.map((h, idx) => `
     <tr class="border-b">
       <td class="p-2">${escapeHtml(h.name)}</td>
@@ -614,28 +617,24 @@ function renderHistory(){
 }
 
 async function downloadStoredReceipt(reference) {
-  // Look up Firestore for receiptUrl (search guest_payments and user collections)
   try {
-    // Search current user's collection first
+    // look in guest_payments and user's payments
     let url = null;
-    if (auth.currentUser && auth.currentUser.uid) {
-      const q = await db.collection("users").doc(auth.currentUser.uid).collection("payments").where("reference", "==", reference).limit(1).get();
-      if (!q.empty) {
-        url = q.docs[0].data().receiptUrl;
-      }
+    if (currentUser && currentUser.uid) {
+      const q = query(collection(db, "users", currentUser.uid, "payments"), where("reference", "==", reference), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) url = snap.docs[0].data().receiptUrl;
     }
     if (!url) {
-      const q2 = await db.collection("guest_payments").where("reference", "==", reference).limit(1).get();
-      if (!q2.empty) url = q2.docs[0].data().receiptUrl;
+      const q2 = query(collection(db, "guest_payments"), where("reference", "==", reference), limit(1));
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) url = snap2.docs[0].data().receiptUrl;
     }
-    if (url) {
-      window.open(url, "_blank");
-    } else {
-      alert("Receipt not found in storage. If the payment was recent, try refreshing.");
-    }
+    if (url) window.open(url, "_blank");
+    else alert("Receipt not found. It may take a few moments after payment to become available.");
   } catch (e) {
-    console.error("Error fetching receipt URL:", e);
-    alert("Could not fetch receipt. Check console.");
+    console.error(e);
+    alert("Error fetching receipt.");
   }
 }
 
@@ -719,7 +718,7 @@ function clearHistory(){
 }
 window.clearHistory = clearHistory;
 
-/* ------------------- Summary & Charts ------------------- */
+/* ------------------- Summary & Chart ------------------- */
 function updateSummary() {
   let total = 0, dept = 0, school = 0;
   history.forEach(h => {
@@ -757,7 +756,7 @@ function renderChart(){
   });
 }
 
-/* ------------------- Profile / Auth helpers ------------------- */
+/* ------------------- Profile helpers ------------------- */
 function saveProfile(){
   const p = {
     name: (document.getElementById("profileName")?.value || "").trim(),
@@ -766,12 +765,10 @@ function saveProfile(){
   };
   localStorage.setItem("studentProfile", JSON.stringify(p));
   if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = p.name || "Not signed in";
-  // prefill payment form
   if (p.name) document.getElementById("studentName").value = p.name;
   if (p.matric) document.getElementById("studentMatric").value = p.matric;
   showNotification("Profile saved locally.");
 }
-window.saveProfile = saveProfile;
 
 function loadProfile(){
   const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
@@ -783,28 +780,111 @@ function loadProfile(){
   if (document.getElementById("studentName")) document.getElementById("studentName").value = p.name || "";
   if (document.getElementById("studentMatric")) document.getElementById("studentMatric").value = p.matric || "";
 }
-window.loadProfile = loadProfile;
 
+/* logout local profile */
 function logoutProfile(){
   localStorage.removeItem("studentProfile");
   if (document.getElementById("userNameDisplay")) document.getElementById("userNameDisplay").innerText = "Not signed in";
   showNotification("Logged out (local profile cleared).");
 }
-window.logoutProfile = logoutProfile;
 
 /* ------------------- Utilities ------------------- */
 function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
 
-function showNotification(msg) {
-  const el = document.getElementById("notificationSection");
-  if (!el) return;
-  document.getElementById("notificationMsg").innerText = msg;
-  el.classList.remove("hidden");
-  setTimeout(() => el.classList.add("hidden"), 4500);
+/* ------------------- Admin: load all payments ------------------- */
+async function loadAllPaymentsForAdmin() {
+  // Only show if current user's email is in ADMIN_EMAILS (client-side check; enforce with security rules)
+  const profile = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
+  const email = profile.email || "";
+  if (!ADMIN_EMAILS.includes(email)) {
+    alert("Admin access required. Set profile email to an admin email to view.");
+    return;
+  }
+  try {
+    const adminBody = document.getElementById("adminTableBody");
+    adminBody.innerHTML = "<tr><td colspan='8' class='p-4'>Loading...</td></tr>";
+    // fetch guest_payments and all user subcollections (simple approach: guest_payments + top-level query)
+    const guestSnap = await getDocs(collection(db, "guest_payments"));
+    const userPayments = [];
+    // Note: collecting all user payments requires a Firestore collection group query on "payments" if structured that way.
+    // For simplicity, query collection group:
+    const paymentsGroup = await getDocs(query(collection(db, "guest_payments"), orderBy("createdAt", "desc")));
+    // show guest payments first
+    let rows = [];
+    guestSnap.forEach(docSnap => {
+      const d = docSnap.data();
+      rows.push(d);
+    });
+
+    // try collection group if your Firestore has "payments" subcollections
+    try {
+      // eslint-disable-next-line no-undef
+      const groupQuery = await getDocs(query((collection(db, "payments")), orderBy("createdAt", "desc")));
+      // If your Firestore doesn't have a top-level "payments" collection, this may fail.
+      groupQuery.forEach(snap => rows.push(snap.data()));
+    } catch (e) {
+      // ignore - different Firestore structure
+    }
+
+    // fallback: just show guest payments
+    adminBody.innerHTML = rows.map(r => `
+      <tr class="border-b">
+        <td class="p-2">${new Date(r.date).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(r.name)}</td>
+        <td class="p-2">${escapeHtml(r.matric)}</td>
+        <td class="p-2">${escapeHtml(r.year)}</td>
+        <td class="p-2">${escapeHtml(r.feeType)}</td>
+        <td class="p-2">₦${Number(r.amount).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(r.reference)}</td>
+        <td class="p-2"><a class="text-indigo-600" href="${escapeHtml(r.receiptUrl || '#')}" target="_blank">Receipt</a></td>
+      </tr>
+    `).join("") || "<tr><td colspan='8' class='p-4'>No payments found.</td></tr>";
+  } catch (err) {
+    console.error(err);
+    alert("Error loading admin payments. Check console.");
+  }
 }
 
-/* ------------------- Init on DOM ready ------------------- */
+/* export admin CSV (basic) */
+function exportAdminCSV() {
+  // export local history as CSV
+  if (!history.length) return alert("No payments to export.");
+  const rows = [["Date","Name","Matric","Year","FeeType","Amount","Reference"]];
+  history.forEach(h => rows.push([new Date(h.date).toLocaleString(), h.name, h.matric, h.year, h.feeType, h.amount, h.reference]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "PTS_All_Payments.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ------------------- Auth: sign in anonymously & handler ------------------- */
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    console.log("Signed in:", user.uid, "Anonymous:", user.isAnonymous);
+    // check if profile email is admin
+    const profile = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
+    if (ADMIN_EMAILS.includes(profile.email || "")) {
+      document.getElementById("navAdminLi").classList.remove("hidden");
+      document.getElementById("userRoleDisplay").innerText = "Admin";
+      document.getElementById("navAdminLi").style.display = "";
+    } else {
+      document.getElementById("navAdminLi").classList.add("hidden");
+      document.getElementById("userRoleDisplay").innerText = "User";
+    }
+  } else {
+    // sign in anonymously if no user
+    signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
+  }
+});
+
+/* ------------------- Init on DOMContentLoaded ------------------- */
 document.addEventListener("DOMContentLoaded", () => {
+  ensureNavButtons();
   showSection("dashboard");
   renderHistory();
   updateSummary();
@@ -814,9 +894,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("studentYear")?.addEventListener("change", updateFees);
   document.getElementById("paymentType")?.addEventListener("change", updateFees);
 
-  // ensure menu toggle for mobile works
-  document.getElementById("menuToggle")?.addEventListener("click", toggleSidebar);
+  // menu toggle for mobile also bound earlier
 });
+
+/* ------------------- Paystack Webhook (server-side guidance) -------------------
+  IMPORTANT: To fully secure payments you must verify Paystack webhooks server-side.
+
+  Example Paystack webhook verification (Node.js / Cloud Functions):
+  const crypto = require('crypto');
+  exports.paystackWebhook = functions.https.onRequest((req, res) => {
+    const hash = crypto.createHmac('sha512', YOUR_PAYSTACK_SECRET).update(JSON.stringify(req.body)).digest('hex');
+    if (hash === req.headers['x-paystack-signature']) {
+      // trusted - process event
+    } else {
+      res.status(400).send('Invalid signature');
+    }
+  });
+
+  Use the webhook to mark payments as VERIFIED on your Firestore documents and to
+  send email receipts from server-side (recommended).
+------------------------------------------------------------------------- */
+
 </script>
 </body>
 </html>
