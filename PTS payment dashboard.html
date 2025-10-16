@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PTS Payment Dashboard — Improved</title>
+  <title>PTS Payment Dashboard</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -29,15 +29,18 @@
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-sm">
 
   <div class="flex">
+
     <!-- Sidebar -->
     <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block" aria-label="Main navigation">
       <div class="flex items-center gap-3 mb-6">
+        <!-- PASTE YOUR LOGO URLS HERE -->
         <img id="logoSmall" src="" alt="PTS logo small" class="w-12 h-12 object-contain bg-white rounded p-1"/>
         <h2 class="text-2xl font-bold">PTS Payments</h2>
       </div>
+
       <nav class="mt-4">
         <ul class="space-y-2" id="navList">
-          <li><button id="navDashboard" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard.</button></li>
+          <li><button id="navDashboard" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard</button></li>
           <li><button id="navPayment" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">💳 Make Payment</button></li>
           <li><button id="navHistory" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📜 Payment History</button></li>
           <li><button id="navProfile" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
@@ -45,6 +48,7 @@
           <li id="navAdminLi" class="hidden"><button id="navAdmin" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📊 Admin</button></li>
         </ul>
       </nav>
+
       <div class="mt-8 space-y-3">
         <button id="darkToggle" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
         <button id="adminLoginBtn" class="w-full bg-indigo-600 text-white py-2 rounded">🔒 Admin Login</button>
@@ -54,15 +58,18 @@
 
     <!-- Main -->
     <main class="flex-1 p-6">
+
       <!-- Header -->
       <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
         <div class="flex items-center gap-4">
+          <!-- PASTE YOUR LOGO URL -->
           <img id="logoHeader" src="" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
           <div>
             <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
             <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
           </div>
         </div>
+
         <div class="flex items-center gap-3">
           <button id="menuToggle" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded" aria-expanded="false">☰ Menu</button>
           <div class="text-right">
@@ -79,6 +86,7 @@
 
       <!-- Dashboard -->
       <section id="dashboardSection" class="space-y-6">
+        <!-- Stats -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
             <h3 class="text-sm font-semibold text-gray-500">Total Payments</h3>
@@ -97,6 +105,7 @@
           </div>
         </div>
 
+        <!-- Announcements -->
         <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
           <h3 class="font-bold text-blue-900 dark:text-white mb-3">📢 Announcements</h3>
           <ul class="list-disc pl-6 text-sm space-y-2">
@@ -106,6 +115,7 @@
           </ul>
         </div>
 
+        <!-- Chart -->
         <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
           <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
           <div class="relative h-56">
@@ -117,10 +127,12 @@
       <!-- Payment -->
       <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow" aria-hidden="true">
         <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
+
         <form id="paymentForm" class="space-y-4" onsubmit="event.preventDefault(); makePayment();">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="sr-only" for="studentName">Full Name</label>
             <input id="studentName" name="studentName" type="text" placeholder="Full Name" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
+
             <label class="sr-only" for="studentMatric">Matric Number</label>
             <input id="studentMatric" name="studentMatric" type="text" placeholder="Matric Number" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" required>
           </div>
@@ -151,6 +163,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
             <label class="sr-only" for="totalAmount">Amount</label>
             <input id="totalAmount" name="totalAmount" type="number" placeholder="Amount" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" readonly>
+
             <div class="flex gap-2">
               <button id="payNowBtn" type="submit" class="bg-blue-700 text-white py-2 px-4 rounded flex items-center gap-2">
                 <span id="payNowLabel">Pay Now</span>
@@ -165,6 +178,7 @@
       <!-- History -->
       <section id="historySection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow" aria-hidden="true">
         <h2 class="text-lg font-bold text-blue-900 mb-4">📜 Payment History</h2>
+
         <div class="flex flex-wrap gap-3 mb-4">
           <input id="searchHistory" oninput="filterHistory()" placeholder="🔍 Search by Name, Matric, or Year" class="flex-1 border rounded px-3 py-2 dark:bg-gray-700 dark:text-white" />
           <button onclick="downloadHistoryPDF()" class="bg-blue-700 text-white px-4 py-2 rounded">⬇ Export PDF</button>
@@ -172,6 +186,7 @@
           <button onclick="exportAdminCSV()" class="bg-indigo-600 text-white px-4 py-2 rounded">⬇ Export CSV</button>
           <button onclick="clearHistory()" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Clear</button>
         </div>
+
         <div class="overflow-x-auto">
           <table class="w-full table-auto text-sm" aria-live="polite">
             <thead class="bg-gray-100 dark:bg-gray-700">
@@ -213,6 +228,7 @@
           <button id="exportAllPayments" class="bg-green-600 text-white px-4 py-2 rounded">Export CSV</button>
           <button id="downloadAllReceipts" class="bg-indigo-600 text-white px-4 py-2 rounded">Download Receipts</button>
         </div>
+
         <div class="overflow-x-auto">
           <table id="adminTable" class="w-full table-auto text-sm">
             <thead class="bg-gray-100 dark:bg-gray-700">
@@ -236,10 +252,12 @@
       <section id="settingsSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow" aria-hidden="true">
         <h2 class="text-lg font-bold text-blue-900 mb-4">⚙ Settings</h2>
         <p class="text-sm text-gray-500">Configure notifications, backups and integrations.</p>
+
         <div class="mt-4">
           <label class="flex items-center gap-2"><input id="autoSaveProfile" type="checkbox" /> Auto-save profile on change</label>
         </div>
       </section>
+
     </main>
   </div>
 
@@ -273,7 +291,11 @@
 
 <script type="module">
 /* ------------------------------------------------------------
-  Improved PTS Payment Dashboard - corrected Paystack flow
+  Improved PTS Payment Dashboard
+  - Fixes pay-now flow: checks Paystack inline and uses window.PaystackPop
+  - Adds admin login modal (client-side check only)
+  - Adds UX improvements: spinner, copy ref, printable receipt preview, keyboard shortcut
+  - IMPORTANT: secure admin and payment verification server-side for production
 ------------------------------------------------------------ */
 
 /* --------------------- CONFIG (user supplied) --------------------- */
@@ -306,7 +328,11 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
-/* --------------------- ADMIN (client-side) --------------------- */
+/* --------------------- ADMIN (client-side) ---------------------
+  For demo convenience this password check is client-side only.
+  Replace ADMIN_PASSWORD with your chosen secret OR integrate Firebase Auth.
+  DO NOT rely on client checks in production — use server-side auth and Firestore rules.
+*/
 const ADMIN_PASSWORD = "Admin@1234";
 
 /* ------------------- Fee structure ------------------- */
@@ -334,6 +360,12 @@ function announce(msg) {
 
 /* ------------------- Nav & UI wiring ------------------- */
 function ensureNavButtons() {
+  const navIds = ["Dashboard","Payment","History","Profile","Settings","Admin"];
+  navIds.forEach(i => {
+    const btn = $(`nav${i}`) || $(`nav${i.toLowerCase()}`) || $(`nav${i}`);
+    // note: our buttons use ids like navDashboard, navPayment, etc.
+  });
+
   $("navDashboard").addEventListener("click", () => showSection("dashboard"));
   $("navPayment").addEventListener("click", () => showSection("payment"));
   $("navHistory").addEventListener("click", () => showSection("history"));
@@ -359,7 +391,9 @@ function ensureNavButtons() {
 
   $("previewReceiptBtn").addEventListener("click", previewReceipt);
   $("closeReceiptBtn").addEventListener("click", () => closeReceiptModal());
-  $("printReceiptBtn").addEventListener("click", () => { window.print(); });
+  $("printReceiptBtn").addEventListener("click", () => {
+    window.print();
+  });
 
   $("refreshAllPayments").addEventListener("click", loadAllPaymentsForAdmin);
   $("exportAllPayments").addEventListener("click", exportAdminCSV);
@@ -412,6 +446,7 @@ function showSection(name) {
   const btn = $(`nav${name[0].toUpperCase()+name.slice(1)}`);
   if (btn) btn.classList.add("nav-active");
 
+  // refresh charts/summary when switching
   updateSummary();
   renderChart();
   renderHistory();
@@ -440,7 +475,7 @@ function updateFees(){
   if (totalEl) totalEl.value = total;
 }
 
-/* ------------------- PAYSTACK PAYMENT FLOW (CORRECTED) ------------------- */
+/* ------------------- PAYSTACK PAYMENT FLOW ------------------- */
 function setPaySpinner(on) {
   if (on) {
     $("paySpinner").classList.remove("hidden");
@@ -454,129 +489,126 @@ function setPaySpinner(on) {
 }
 
 async function makePayment(){
-  try {
-    // Basic client validation
-    const name = ($("studentName").value || "").trim();
-    const matric = ($("studentMatric").value || "").trim();
-    const year = $("studentYear").value;
-    const amount = Number($("totalAmount").value || 0);
-    const type = $("paymentType").value || "All";
-    const email = ($("profileEmail").value || `${matric}@pts.edu.ng`).trim();
+  // Basic client validation
+  const name = ($("studentName").value || "").trim();
+  const matric = ($("studentMatric").value || "").trim();
+  const year = $("studentYear").value;
+  const amount = Number($("totalAmount").value || 0);
+  const type = $("paymentType").value || "All";
+  const email = ($("profileEmail").value || `${matric}@pts.edu.ng`).trim();
 
-    if (!name || !matric || !year || amount <= 0) {
-      return alert("⚠ Please fill all fields and ensure amount > 0");
-    }
+  if (!name || !matric || !year || amount <= 0) {
+    return alert("⚠ Please fill all fields and ensure amount > 0");
+  }
 
-    // Ensure Paystack SDK loaded
-    if (!window.PaystackPop) {
-      console.error("PaystackPop not found on window:", window.PaystackPop);
-      alert("Paystack inline library not loaded. Confirm internet connection and that https://js.paystack.co/v1/inline.js is reachable.");
-      return;
-    }
+  // check Paystack object exists
+  if (!window.PaystackPop && !window.paystackpop && !window.Paystack) {
+    alert("Paystack inline library not loaded. Confirm internet connection and that https://js.paystack.co/v1/inline.js is reachable.");
+    return;
+  }
 
-    setPaySpinner(true);
+  setPaySpinner(true);
 
-    // single consistent reference used everywhere
-    const reference = "PTS_" + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36);
-    console.log("Starting payment, reference:", reference);
+  const reference = "PTS_" + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36);
 
-    // Create Paystack handler using PaystackPop.setup
-    const handler = PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY =  "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
-      email: email,
-      amount: Math.round(amount * 100), // kobo
-      currency: "NGN",
-      ref: reference,
-      split_code: PAYSTACK_SPLIT_CODE = "SPL_6x7h2k5jabcde"; // Replace with your real split code
-      metadata: {
-        custom_fields: [
-          { display_name: "Student Name", variable_name: "student_name", value: name },
-          { display_name: "Matric No", variable_name: "matric", value: matric }
-        ]
-      },
-      callback: async (res) => {
-        // res.reference should be the same as our reference
-        console.log("Paystack callback success:", res);
+  // Use window.PaystackPop if available (older variable names)
+  const Paystack = window.PaystackPop || window.paystackpop || window.Paystack || window.PaystackInline || null;
+
+  if (!Paystack || typeof Paystack.setup !== "function") {
+    setPaySpinner(false);
+    alert("Paystack inline integration not available. Check browser console.");
+    return;
+  }
+
+  const handler = Paystack.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email,
+    amount: Math.round(amount * 100),
+    currency: "NGN",
+    ref: reference,
+    split_code: PAYSTACK_SPLIT_CODE,
+    metadata: {
+      custom_fields: [
+        { display_name: "Student Name", variable_name: "student_name", value: name },
+        { display_name: "Matric No", variable_name: "matric", value: matric }
+      ]
+    },
+    callback: async (res) => {
+      try {
+        // build record
+        const record = {
+          name,
+          matric,
+          year,
+          feeType: type,
+          amount,
+          date: new Date().toISOString(),
+          reference: res.reference || reference,
+          status: "SUCCESS",
+          payerEmail: email,
+          createdAt: serverTimestamp()
+        };
+
+        // local history (instant)
+        history.push(record);
+        localStorage.setItem("paymentHistory", JSON.stringify(history));
+        renderHistory();
+        updateSummary();
+        renderChart();
+
+        // save to Firestore
         try {
-          const record = {
-            name,
-            matric,
-            year,
-            feeType: type,
-            amount,
-            date: new Date().toISOString(),
-            reference: res.reference || reference,
-            status: "SUCCESS",
-            payerEmail: email,
-            createdAt: serverTimestamp()
-          };
-
-          // add to local history
-          history.push(record);
-          localStorage.setItem("paymentHistory", JSON.stringify(history));
-          renderHistory();
-          updateSummary();
-          renderChart();
-
-          // Save to Firestore (best-effort)
-          try {
-            let docRef;
-            if (currentUser && currentUser.uid) {
-              docRef = await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
-            } else {
-              docRef = await addDoc(collection(db, "guest_payments"), record);
-            }
-
-            // attempt receipt generation & upload
-            try {
-              const { blob, filename } = await generateReceiptPDF(record, true);
-              const path = `receipts/${docRef.id}/${filename}`;
-              const sRef = storageRef(storage, path);
-              await uploadBytes(sRef, blob);
-              const receiptUrl = await getDownloadURL(sRef);
-              await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl }, { merge: true });
-            } catch (upErr) {
-              console.warn("Receipt upload failed:", upErr);
-            }
-
-            // call cloud function to send email (if exists)
-            try {
-              const sendReceipt = httpsCallable(functions, 'sendReceiptEmail');
-              await sendReceipt({ email: record.payerEmail, name: record.name, reference: record.reference });
-            } catch (fnErr) {
-              console.warn("sendReceiptEmail not available or failed:", fnErr);
-            }
-          } catch (dbErr) {
-            console.warn("Could not save to Firestore:", dbErr);
+          let docRef;
+          if (currentUser && currentUser.uid) {
+            docRef = await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
+          } else {
+            docRef = await addDoc(collection(db, "guest_payments"), record);
           }
 
-          setPaySpinner(false);
-          announce("✅ Payment successful! Ref: " + (res.reference || reference));
-        } catch (err) {
-          console.error("Error processing success callback:", err);
-          setPaySpinner(false);
-          announce("⚠ Payment succeeded but post-processing failed.");
-        }
-      },
-      onClose: () => {
-        console.log("Payment window closed by user.");
-        setPaySpinner(false);
-        announce("❌ Payment window closed.");
-      }
-    });
+          // generate PDF and upload (attempt)
+          try {
+            const { blob, filename } = await generateReceiptPDF(record, true);
+            const path = `receipts/${docRef.id}/${filename}`;
+            const sRef = storageRef(storage, path);
+            await uploadBytes(sRef, blob);
+            const receiptUrl = await getDownloadURL(sRef);
+            await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl }, { merge: true });
+          } catch (upErr) {
+            console.warn("Receipt upload failed:", upErr);
+          }
 
-    // open paystack iframe
-    try {
-      handler.openIframe();
-    } catch (openErr) {
-      console.error("Could not open Paystack iframe:", openErr);
+          // Try to call a cloud function to send email (if deployed)
+          try {
+            const sendReceipt = httpsCallable(functions, 'sendReceiptEmail');
+            await sendReceipt({ email: record.payerEmail, name: record.name, reference: record.reference });
+          } catch (fnErr) {
+            console.warn("sendReceiptEmail not available or failed:", fnErr);
+          }
+        } catch (dbErr) {
+          console.warn("Could not save to Firestore:", dbErr);
+        }
+
+        setPaySpinner(false);
+        announce("✅ Payment successful! Ref: " + (res.reference || reference));
+      } catch (err) {
+        console.error("Error in callback:", err);
+        setPaySpinner(false);
+        announce("⚠ Payment succeeded but client post-processing failed.");
+      }
+    },
+    onClose: () => {
       setPaySpinner(false);
-      alert("Could not open Paystack payment window. Check console for details.");
+      announce("❌ Payment window closed.");
     }
-  } catch (topErr) {
-    console.error("makePayment top-level error:", topErr);
+  });
+
+  // open iframe
+  try {
+    handler.openIframe();
+  } catch (err) {
+    console.error("Paystack openIframe error:", err);
     setPaySpinner(false);
-    alert("An unexpected error occurred. Check console.");
+    alert("Could not open Paystack payment window. Check console for details.");
   }
 }
 
@@ -589,6 +621,7 @@ async function generateReceiptPDF(record, returnBlob = false) {
     const margin = 40;
     let y = 40;
 
+    // try embed logo
     const logoImg = $("logoHeader");
     let logoDataUrl = null;
     if (logoImg && logoImg.src) {
@@ -712,13 +745,19 @@ function renderHistory(){
 
 async function downloadStoredReceipt(reference) {
   try {
+    // search guest_payments first then users/.../payments
     let url = null;
+
+    // try guest_payments
     const q1 = query(collection(db, "guest_payments"), where("reference","==", reference), limit(1));
     const s1 = await getDocs(q1);
     if (!s1.empty) { url = s1.docs[0].data().receiptUrl; }
 
+    // if not found, try collection group (if present) - for demo this may not run
     if (!url) {
       try {
+        // collectionGroup requires admin privileges in rules if you used them - might not work in all setups
+        // For simplicity we attempt top-level "payments" collection if used
         const q2 = query(collection(db, "payments"), where("reference","==", reference), limit(1));
         const s2 = await getDocs(q2);
         if (!s2.empty) url = s2.docs[0].data().receiptUrl;
@@ -892,6 +931,7 @@ function loadProfile(){
   if ($("studentMatric")) $("studentMatric").value = p.matric || "";
 }
 
+/* logout local profile */
 function logoutProfile(){
   localStorage.removeItem("studentProfile");
   if ($("userNameDisplay")) $("userNameDisplay").innerText = "Not signed in";
@@ -901,7 +941,7 @@ function logoutProfile(){
 /* ------------------- Utilities ------------------- */
 function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
 
-/* ------------------- Admin modal ------------------- */
+/* ------------------- Admin: client login modal ------------------- */
 function openAdminModal(){
   $("adminModal").classList.remove("hidden");
   $("adminPasswordInput").value = "";
@@ -914,6 +954,7 @@ function closeAdminModal(){
 function adminLoginSubmit(){
   const pw = $("adminPasswordInput").value || "";
   if (pw === ADMIN_PASSWORD) {
+    // show admin nav and section
     $("navAdminLi").classList.remove("hidden");
     $("userRoleDisplay").innerText = "Admin";
     closeAdminModal();
@@ -927,6 +968,7 @@ function adminLoginSubmit(){
 
 /* ------------------- Admin: load payments ------------------- */
 async function loadAllPaymentsForAdmin() {
+  // client-side check (again): ensure navAdminLi is visible
   if ($("navAdminLi").classList.contains("hidden")) {
     alert("Admin access required.");
     return;
@@ -934,13 +976,19 @@ async function loadAllPaymentsForAdmin() {
   try {
     const adminBody = $("adminTableBody");
     adminBody.innerHTML = "<tr><td colspan='8' class='p-4'>Loading...</td></tr>";
+    // attempt to read guest_payments collection
     const guestSnap = await getDocs(collection(db, "guest_payments"));
     let rows = [];
-    guestSnap.forEach(docSnap => { rows.push(docSnap.data()); });
+    guestSnap.forEach(docSnap => {
+      rows.push(docSnap.data());
+    });
+    // try top-level payments if present
     try {
       const paySnap = await getDocs(collection(db, "payments"));
       paySnap.forEach(s => rows.push(s.data()));
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore if not present
+    }
 
     if (!rows.length) {
       adminBody.innerHTML = "<tr><td colspan='8' class='p-4'>No payments found.</td></tr>";
@@ -980,8 +1028,10 @@ function exportAdminCSV() {
   URL.revokeObjectURL(url);
 }
 
+/* Download all receipts (placeholders) */
 async function downloadAllReceipts() {
   alert("This will attempt to download receipts for each recorded payment. In production, generate a server-side zip for efficiency.");
+  // In client: iterate history and open receiptUrl if present
   history.forEach(h => { if (h.receiptUrl) window.open(h.receiptUrl, "_blank"); });
 }
 
@@ -990,6 +1040,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
     console.log("Signed in:", user.uid, "Anonymous:", user.isAnonymous);
+    // show admin UI if profile email matches (for demo)
     const prof = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
     if (prof.email && prof.email.toLowerCase().includes("admin")) {
       $("navAdminLi").classList.remove("hidden");
@@ -1002,6 +1053,7 @@ onAuthStateChanged(auth, (user) => {
 
 /* ------------------- Receipt preview modal ------------------- */
 async function previewReceipt() {
+  // Use current form values to create preview text
   const record = {
     name: $("studentName").value || "N/A",
     matric: $("studentMatric").value || "N/A",
@@ -1032,15 +1084,21 @@ function closeReceiptModal() {
   $("receiptModal").classList.add("hidden");
 }
 
+/* ------------------- Admin modal helper ------------------- */
+// already implemented above
+
 /* ------------------- Init ------------------- */
 document.addEventListener("DOMContentLoaded", () => {
   ensureNavButtons();
+  // default view
   showSection("dashboard");
   renderHistory();
   updateSummary();
   renderChart();
   loadProfile();
   document.querySelectorAll("#studentYear, #paymentType").forEach(i => i?.addEventListener("change", updateFees));
+
+  // restore dark mode pref
   if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
 });
 
