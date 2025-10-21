@@ -18,7 +18,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- Paystack (inline) -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
 
   <style>
     .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; white-space: pre-wrap; }
@@ -33,6 +32,7 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block" aria-label="Main navigation">
       <div class="flex items-center gap-3 mb-6">
+        <!-- PASTE YOUR LOGO URLS HERE -->
         <img id="logoSmall" src="" alt="PTS logo small" class="w-12 h-12 object-contain bg-white rounded p-1"/>
         <h2 class="text-2xl font-bold">PTS Payments</h2>
       </div>
@@ -61,6 +61,7 @@
       <!-- Header -->
       <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
         <div class="flex items-center gap-4">
+          <!-- PASTE YOUR LOGO URL -->
           <img id="logoHeader" src="" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
           <div>
             <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
@@ -286,21 +287,25 @@
       <div id="receiptContent" class="mt-4 receipt-mono text-xs"></div>
     </div>
   </div>
-
+  <script src="https://js.paystack.co/v1/inline.js"></script>
 <script type="module">
 /* ------------------------------------------------------------
-  PTS Payment Dashboard - Paystack fixed integration
+  Improved PTS Payment Dashboard
+  - Fixes pay-now flow: checks Paystack inline and uses window.PaystackPop
+  - Adds admin login modal (client-side check only)
+  - Adds UX improvements: spinner, copy ref, printable receipt preview, keyboard shortcut
+  - IMPORTANT: secure admin and payment verification server-side for production
 ------------------------------------------------------------ */
 
 /* --------------------- CONFIG (user supplied) --------------------- */
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // replace for testing if needed
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
 const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553";
 
 /* Firebase modular imports (v11) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, doc, setDoc, getDocs, query, where, limit, serverTimestamp
+  getFirestore, collection, addDoc, doc, setDoc, getDocs, query, where, orderBy, limit, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-functions.js";
@@ -322,7 +327,11 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
-/* --------------------- ADMIN (client-side) --------------------- */
+/* --------------------- ADMIN (client-side) ---------------------
+  For demo convenience this password check is client-side only.
+  Replace ADMIN_PASSWORD with your chosen secret OR integrate Firebase Auth.
+  DO NOT rely on client checks in production — use server-side auth and Firestore rules.
+*/
 const ADMIN_PASSWORD = "Admin@1234";
 
 /* ------------------- Fee structure ------------------- */
@@ -336,10 +345,10 @@ const fees = {
 let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
 let currentUser = null;
 
-/* DOM helper */
+/* ------------------- DOM Shortcuts ------------------- */
 const $ = id => document.getElementById(id);
 
-/* announce */
+/* ------------------- Accessibility helpers ------------------- */
 function announce(msg) {
   const el = $("notificationSection");
   const txt = $("notificationMsg");
@@ -348,8 +357,14 @@ function announce(msg) {
   setTimeout(() => el.classList.add("hidden"), 3500);
 }
 
-/* UI wiring */
+/* ------------------- Nav & UI wiring ------------------- */
 function ensureNavButtons() {
+  const navIds = ["Dashboard","Payment","History","Profile","Settings","Admin"];
+  navIds.forEach(i => {
+    const btn = $(`nav${i}`) || $(`nav${i.toLowerCase()}`) || $(`nav${i}`);
+    // note: our buttons use ids like navDashboard, navPayment, etc.
+  });
+
   $("navDashboard").addEventListener("click", () => showSection("dashboard"));
   $("navPayment").addEventListener("click", () => showSection("payment"));
   $("navHistory").addEventListener("click", () => showSection("history"));
@@ -383,6 +398,7 @@ function ensureNavButtons() {
   $("exportAllPayments").addEventListener("click", exportAdminCSV);
   $("downloadAllReceipts").addEventListener("click", downloadAllReceipts);
 
+  // keyboard shortcut: P opens Payment section
   document.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
@@ -392,16 +408,20 @@ function ensureNavButtons() {
   });
 }
 
-/* UI utilities */
+/* ------------------- UI utilities ------------------- */
 function toggleDarkMode() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 }
+
 function focusFirstInputInPayment() {
-  setTimeout(() => { const el = $("studentName"); if (el) el.focus(); }, 100);
+  setTimeout(() => {
+    const el = $("studentName");
+    if (el) el.focus();
+  }, 100);
 }
 
-/* Section switching */
+/* ------------------- Section switching ------------------- */
 function clearActiveNav() {
   const items = document.querySelectorAll("#navList button");
   items.forEach(b => b.classList.remove("nav-active"));
@@ -411,8 +431,13 @@ function showSection(name) {
   sections.forEach(id => {
     const el = $(`${id}Section`);
     if (el) {
-      if (id === name) { el.classList.remove("hidden"); el.setAttribute("aria-hidden", "false"); }
-      else { el.classList.add("hidden"); el.setAttribute("aria-hidden", "true"); }
+      if (id === name) {
+        el.classList.remove("hidden");
+        el.setAttribute("aria-hidden", "false");
+      } else {
+        el.classList.add("hidden");
+        el.setAttribute("aria-hidden", "true");
+      }
     }
   });
 
@@ -420,12 +445,13 @@ function showSection(name) {
   const btn = $(`nav${name[0].toUpperCase()+name.slice(1)}`);
   if (btn) btn.classList.add("nav-active");
 
+  // refresh charts/summary when switching
   updateSummary();
   renderChart();
   renderHistory();
 }
 
-/* Fees UI */
+/* ------------------- Fees UI ------------------- */
 function updateFees(){
   const year = $("studentYear")?.value;
   const type = $("paymentType")?.value || "All";
@@ -448,7 +474,7 @@ function updateFees(){
   if (totalEl) totalEl.value = total;
 }
 
-/* ------------------- PAYSTACK PAYMENT FLOW (FIXED) ------------------- */
+/* ------------------- PAYSTACK PAYMENT FLOW ------------------- */
 function setPaySpinner(on) {
   if (on) {
     $("paySpinner").classList.remove("hidden");
@@ -462,6 +488,7 @@ function setPaySpinner(on) {
 }
 
 async function makePayment(){
+  // Basic client validation
   const name = ($("studentName").value || "").trim();
   const matric = ($("studentMatric").value || "").trim();
   const year = $("studentYear").value;
@@ -473,8 +500,8 @@ async function makePayment(){
     return alert("⚠ Please fill all fields and ensure amount > 0");
   }
 
-  // Ensure Paystack inline library loaded
-  if (!window.PaystackPop) {
+  // check Paystack object exists
+  if (!window.PaystackPop && !window.paystackpop && !window.Paystack) {
     alert("Paystack inline library not loaded. Confirm internet connection and that https://js.paystack.co/v1/inline.js is reachable.");
     return;
   }
@@ -482,84 +509,216 @@ async function makePayment(){
   setPaySpinner(true);
 
   const reference = "PTS_" + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36);
-  const amountKobo = Math.round(amount * 100);
 
-  // Use PaystackPop.setup(...) -> returns handler
-  try {
-    const handler = PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email,
-      amount: amountKobo,
-      currency: "NGN",
-      ref: reference,
-      metadata: {
-        custom_fields: [
-          { display_name: "Student Name", variable_name: "student_name", value: name },
-          { display_name: "Matric No", variable_name: "matric", value: matric }
-        ]
-      },
-      callback: async (res) => {
-        // res.reference provided by Paystack after successful payment
-        setPaySpinner(false);
-        announce("✅ Payment successful! Ref: " + (res.reference || reference));
+  // Use window.PaystackPop if available (older variable names)
+  const Paystack = window.PaystackPop || window.paystackpop || window.Paystack || window.PaystackInline || null;
 
-        // record (client-side)
+  if (!Paystack || typeof Paystack.setup !== "function") {
+    setPaySpinner(false);
+    alert("Paystack inline integration not available. Check browser console.");
+    return;
+  }
+
+  const handler = Paystack.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email,
+    amount: Math.round(amount * 100),
+    currency: "NGN",
+    ref: reference,
+    split_code: PAYSTACK_SPLIT_CODE,
+    metadata: {
+      custom_fields: [
+        { display_name: "Student Name", variable_name: "student_name", value: name },
+        { display_name: "Matric No", variable_name: "matric", value: matric }
+      ]
+    },
+    callback: async (res) => {
+      try {
+        // build record
         const record = {
-          name, matric, year, feeType: type, amount,
+          name,
+          matric,
+          year,
+          feeType: type,
+          amount,
           date: new Date().toISOString(),
           reference: res.reference || reference,
           status: "SUCCESS",
           payerEmail: email,
           createdAt: serverTimestamp()
         };
+
+        // local history (instant)
         history.push(record);
         localStorage.setItem("paymentHistory", JSON.stringify(history));
         renderHistory();
         updateSummary();
         renderChart();
 
-        // attempt Firestore save (best-effort)
+        // save to Firestore
         try {
+          let docRef;
           if (currentUser && currentUser.uid) {
-            await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
+            docRef = await addDoc(collection(db, "users", currentUser.uid, "payments"), record);
           } else {
-            await addDoc(collection(db, "guest_payments"), record);
+            docRef = await addDoc(collection(db, "guest_payments"), record);
           }
-        } catch (e) {
-          console.warn("Could not save payment record to Firestore:", e);
+
+          // generate PDF and upload (attempt)
+          try {
+            const { blob, filename } = await generateReceiptPDF(record, true);
+            const path = `receipts/${docRef.id}/${filename}`;
+            const sRef = storageRef(storage, path);
+            await uploadBytes(sRef, blob);
+            const receiptUrl = await getDownloadURL(sRef);
+            await setDoc(doc(db, docRef.parent.path, docRef.id), { receiptUrl }, { merge: true });
+          } catch (upErr) {
+            console.warn("Receipt upload failed:", upErr);
+          }
+
+          // Try to call a cloud function to send email (if deployed)
+          try {
+            const sendReceipt = httpsCallable(functions, 'sendReceiptEmail');
+            await sendReceipt({ email: record.payerEmail, name: record.name, reference: record.reference });
+          } catch (fnErr) {
+            console.warn("sendReceiptEmail not available or failed:", fnErr);
+          }
+        } catch (dbErr) {
+          console.warn("Could not save to Firestore:", dbErr);
         }
 
-        // Redirect to success page with query info
-        const params = new URLSearchParams();
-        params.set("ref", encodeURIComponent(res.reference || reference));
-        params.set("amount", encodeURIComponent(amount));
-        params.set("name", encodeURIComponent(name));
-        window.location.href = "Payment Success.html?" + params.toString();
-      },
-      onClose: () => {
         setPaySpinner(false);
-        announce("❌ Payment window closed.");
+        announce("✅ Payment successful! Ref: " + (res.reference || reference));
+      } catch (err) {
+        console.error("Error in callback:", err);
+        setPaySpinner(false);
+        announce("⚠ Payment succeeded but client post-processing failed.");
       }
-    });
+    },
+    onClose: () => {
+      setPaySpinner(false);
+      announce("❌ Payment window closed.");
+    }
+  });
 
-    // open iframe
+  // open iframe
+  try {
     handler.openIframe();
   } catch (err) {
-    console.error("Paystack error:", err);
+    console.error("Paystack openIframe error:", err);
     setPaySpinner(false);
     alert("Could not open Paystack payment window. Check console for details.");
   }
 }
 
-/* ------------------- Receipt preview etc. (same as earlier) ------------------- */
-/* ... keep generateReceiptPDF, imgToDataURL, uploadBlobToStorage, renderHistory, downloadStoredReceipt, copyRef, filterHistory, downloadHistoryPDF, downloadHistoryExcel, clearHistory, updateSummary, renderChart ... */
-/* For brevity this file keeps all functions from earlier. They were included exactly in the big file you provided.
-   If you want the full unabridged functions included (generateReceiptPDF, uploadBlobToStorage, admin helpers, etc.), paste them here from your working file.
-*/
+/* ------------------- Receipt generation (jsPDF) ------------------- */
+async function generateReceiptPDF(record, returnBlob = false) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    let y = 40;
 
-/* Minimal implementations so page is fully functional with Paystack fix: */
-function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+    // try embed logo
+    const logoImg = $("logoHeader");
+    let logoDataUrl = null;
+    if (logoImg && logoImg.src) {
+      try { logoDataUrl = await imgToDataURL(logoImg.src); } catch(e){ console.warn("Logo toDataURL failed", e); }
+    }
+    if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, y, 100, 40);
 
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("PTS Payment Receipt", pageWidth - margin, y + 18, { align: "right" });
+    y += 60;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${new Date(record.date).toLocaleString()}`, margin, y);
+    doc.text(`Reference: ${record.reference}`, pageWidth - margin, y, { align: "right" });
+    y += 22;
+
+    doc.setDrawColor(200);
+    doc.rect(margin, y, pageWidth - margin*2, 120, "S");
+    let boxY = y + 20;
+    const labelX = margin + 12;
+    const valX = pageWidth / 2;
+    doc.setFontSize(11);
+
+    doc.text("Student Name:", labelX, boxY);
+    doc.text(record.name || "-", valX, boxY);
+    boxY += 18;
+
+    doc.text("Matric No:", labelX, boxY);
+    doc.text(record.matric || "-", valX, boxY);
+    boxY += 18;
+
+    doc.text("Year:", labelX, boxY);
+    doc.text(String(record.year || "-"), valX, boxY);
+    boxY += 18;
+
+    doc.text("Fee Type:", labelX, boxY);
+    doc.text(String(record.feeType || "-"), valX, boxY);
+    boxY += 18;
+
+    doc.text("Amount Paid:", labelX, boxY);
+    doc.text(`₦${Number(record.amount).toLocaleString()}`, valX, boxY);
+    boxY += 20;
+
+    y += 150;
+
+    doc.setFontSize(10);
+    doc.text("Notes:", margin, y);
+    y += 14;
+    doc.setFontSize(9);
+    const noteLines = doc.splitTextToSize("This is an autogenerated receipt. For official verification, check Paystack and contact the bursary. For verification, use the reference number printed above.", pageWidth - margin*2);
+    doc.text(noteLines, margin, y);
+    y += noteLines.length * 12 + 20;
+
+    const filename = `Receipt_${(record.matric || "unknown")}_${record.reference}.pdf`;
+
+    if (returnBlob) {
+      const pdfBlob = doc.output("blob");
+      return { blob: pdfBlob, filename };
+    } else {
+      doc.save(filename);
+    }
+  } catch (err) {
+    console.error("Receipt generation failed:", err);
+    throw err;
+  }
+}
+
+function imgToDataURL(url) {
+  return new Promise((resolve, reject) => {
+    if (!url) return resolve(null);
+    if (url.startsWith("data:")) return resolve(url);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = (e) => reject(e);
+    img.src = url;
+  });
+}
+
+/* ------------------- Storage helper ------------------- */
+async function uploadBlobToStorage(blob, path) {
+  const sRef = storageRef(storage, path);
+  const result = await uploadBytes(sRef, blob);
+  return await getDownloadURL(result.ref);
+}
+
+/* ------------------- History & Exports ------------------- */
 function renderHistory(){
   const tbody = $("historyTable");
   if (!tbody) return;
@@ -578,14 +737,51 @@ function renderHistory(){
       <td class="p-2">${escapeHtml(h.reference || "-")}</td>
       <td class="p-2 flex gap-2">
         <button onclick="copyRef('${escapeHtml(h.reference)}')" class="px-2 py-1 bg-gray-200 rounded text-xs">Copy Ref</button>
+        <button onclick="downloadStoredReceipt('${escapeHtml(h.reference)}')" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs">Receipt</button>
       </td>
     </tr>`).join("");
 }
 
-function copyRef(ref) {
-  try { navigator.clipboard.writeText(ref); announce("Reference copied to clipboard"); } catch(e) { alert("Copy failed"); }
+async function downloadStoredReceipt(reference) {
+  try {
+    // search guest_payments first then users/.../payments
+    let url = null;
+
+    // try guest_payments
+    const q1 = query(collection(db, "guest_payments"), where("reference","==", reference), limit(1));
+    const s1 = await getDocs(q1);
+    if (!s1.empty) { url = s1.docs[0].data().receiptUrl; }
+
+    // if not found, try collection group (if present) - for demo this may not run
+    if (!url) {
+      try {
+        // collectionGroup requires admin privileges in rules if you used them - might not work in all setups
+        // For simplicity we attempt top-level "payments" collection if used
+        const q2 = query(collection(db, "payments"), where("reference","==", reference), limit(1));
+        const s2 = await getDocs(q2);
+        if (!s2.empty) url = s2.docs[0].data().receiptUrl;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (url) window.open(url, "_blank");
+    else alert("Receipt not found in Firestore. It might take a few moments to appear or require server-side webhook to save.");
+  } catch (e) {
+    console.error(e);
+    alert("Error fetching receipt.");
+  }
 }
-window.copyRef = copyRef;
+
+function copyRef(ref) {
+  try {
+    navigator.clipboard.writeText(ref);
+    announce("Reference copied to clipboard");
+  } catch (e) {
+    console.warn(e);
+    alert("Copy failed");
+  }
+}
 
 function filterHistory(){
   const q = ($("searchHistory").value || "").toLowerCase().trim();
@@ -610,24 +806,83 @@ function filterHistory(){
       <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
       <td class="p-2">${new Date(h.date).toLocaleString()}</td>
       <td class="p-2">${escapeHtml(h.reference || "-")}</td>
-      <td class="p-2"><button onclick="copyRef('${escapeHtml(h.reference)}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">Copy Ref</button></td>
+      <td class="p-2"><button onclick="downloadStoredReceipt('${escapeHtml(h.reference)}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs">Receipt</button></td>
     </tr>`).join("");
 }
 window.filterHistory = filterHistory;
 
-function downloadHistoryPDF(){ alert("Export PDF (not implemented full here)"); }
+function downloadHistoryPDF(){
+  if (!history.length) return alert("No history to export.");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 40;
+  let y = 40;
+  doc.setFontSize(16);
+  doc.text("PTS Payment History", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+  y += 30;
+  doc.setFontSize(10);
+  history.slice().reverse().forEach(h => {
+    const line = `${new Date(h.date).toLocaleString()} | ${h.name} | ${h.matric} | ${h.feeType} | ₦${Number(h.amount).toLocaleString()} | Ref: ${h.reference || "-"}`;
+    doc.text(line, margin, y);
+    y += 14;
+    if (y > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage();
+      y = 40;
+    }
+  });
+  doc.save("PTS_Payment_History.pdf");
+}
 window.downloadHistoryPDF = downloadHistoryPDF;
-function downloadHistoryExcel(){ alert("Export Excel (not implemented full here)"); }
+
+function downloadHistoryExcel(){
+  if (!history.length) return alert("No history available");
+  try {
+    const worksheetData = history.map(h => ({
+      Date: new Date(h.date).toLocaleString(),
+      Name: h.name,
+      Matric: h.matric,
+      Year: h.year,
+      FeeType: h.feeType,
+      Amount: h.amount,
+      Reference: h.reference || "-"
+    }));
+    const ws = XLSX.utils.json_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "History");
+    XLSX.writeFile(wb, "PTS_Payment_History.xlsx");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Excel export failed.");
+  }
+}
 window.downloadHistoryExcel = downloadHistoryExcel;
-function clearHistory(){ if (!confirm("Clear local payment history?")) return; history = []; localStorage.removeItem("paymentHistory"); renderHistory(); updateSummary(); renderChart(); }
+
+function clearHistory(){
+  if (!confirm("Clear local payment history? This will remove local entries.")) return;
+  history = [];
+  localStorage.removeItem("paymentHistory");
+  renderHistory();
+  updateSummary();
+  renderChart();
+}
 window.clearHistory = clearHistory;
 
+/* ------------------- Summary & Chart ------------------- */
 function updateSummary() {
   let total = 0, dept = 0, school = 0;
-  history.forEach(h => { const amt = Number(h.amount) || 0; total += amt; const ft = (h.feeType || "").toLowerCase(); if (ft.includes("department")) dept += amt; if (ft.includes("association")||ft.includes("school")) school += amt;});
-  if ($("totalPayments")) $("totalPayments").innerText = "₦" + total.toLocaleString();
-  if ($("totalDept")) $("totalDept").innerText = "₦" + dept.toLocaleString();
-  if ($("totalSchool")) $("totalSchool").innerText = "₦" + school.toLocaleString();
+  history.forEach(h => {
+    const amt = Number(h.amount) || 0;
+    total += amt;
+    const ft = (h.feeType || "").toLowerCase();
+    if (ft.includes("department")) dept += amt;
+    if (ft.includes("association") || ft.includes("school")) school += amt;
+  });
+  const totalEl = $("totalPayments");
+  const deptEl = $("totalDept");
+  const schoolEl = $("totalSchool");
+  if (totalEl) totalEl.innerText = "₦" + total.toLocaleString();
+  if (deptEl) deptEl.innerText = "₦" + dept.toLocaleString();
+  if (schoolEl) schoolEl.innerText = "₦" + school.toLocaleString();
 }
 
 let myChart = null;
@@ -642,20 +897,28 @@ function renderChart(){
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: "doughnut",
-    data: { labels: ["Departmental", "Association/School", "Other"], datasets: [{ data: [deptTotal, schoolTotal, Math.max(0, other)], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }] },
+    data: {
+      labels: ["Departmental", "Association/School", "Other"],
+      datasets: [{ data: [deptTotal, schoolTotal, Math.max(0, other)], backgroundColor: ["#34d399","#8b5cf6","#f59e0b"] }]
+    },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
   });
 }
 
-/* Profile helpers */
+/* ------------------- Profile helpers ------------------- */
 function saveProfile(){
-  const p = { name: ($("profileName").value || "").trim(), matric: ($("profileMatric").value || "").trim(), email: ($("profileEmail").value || "").trim() };
+  const p = {
+    name: ($("profileName").value || "").trim(),
+    matric: ($("profileMatric").value || "").trim(),
+    email: ($("profileEmail").value || "").trim()
+  };
   localStorage.setItem("studentProfile", JSON.stringify(p));
   if ($("userNameDisplay")) $("userNameDisplay").innerText = p.name || "Not signed in";
   if (p.name) $("studentName").value = p.name;
   if (p.matric) $("studentMatric").value = p.matric;
   announce("Profile saved locally.");
 }
+
 function loadProfile(){
   const p = JSON.parse(localStorage.getItem("studentProfile") || "null");
   if (!p) return;
@@ -667,11 +930,116 @@ function loadProfile(){
   if ($("studentMatric")) $("studentMatric").value = p.matric || "";
 }
 
-/* Auth: anonymous sign-in for Firestore usage */
+/* logout local profile */
+function logoutProfile(){
+  localStorage.removeItem("studentProfile");
+  if ($("userNameDisplay")) $("userNameDisplay").innerText = "Not signed in";
+  announce("Logged out (local profile cleared).");
+}
+
+/* ------------------- Utilities ------------------- */
+function escapeHtml(s){ if (!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+/* ------------------- Admin: client login modal ------------------- */
+function openAdminModal(){
+  $("adminModal").classList.remove("hidden");
+  $("adminPasswordInput").value = "";
+  $("adminPasswordInput").focus();
+}
+function closeAdminModal(){
+  $("adminModal").classList.add("hidden");
+  $("adminLoginMsg").classList.add("hidden");
+}
+function adminLoginSubmit(){
+  const pw = $("adminPasswordInput").value || "";
+  if (pw === ADMIN_PASSWORD) {
+    // show admin nav and section
+    $("navAdminLi").classList.remove("hidden");
+    $("userRoleDisplay").innerText = "Admin";
+    closeAdminModal();
+    showSection("admin");
+    announce("🔓 Admin access granted (client-side)");
+  } else {
+    $("adminLoginMsg").innerText = "Incorrect password.";
+    $("adminLoginMsg").classList.remove("hidden");
+  }
+}
+
+/* ------------------- Admin: load payments ------------------- */
+async function loadAllPaymentsForAdmin() {
+  // client-side check (again): ensure navAdminLi is visible
+  if ($("navAdminLi").classList.contains("hidden")) {
+    alert("Admin access required.");
+    return;
+  }
+  try {
+    const adminBody = $("adminTableBody");
+    adminBody.innerHTML = "<tr><td colspan='8' class='p-4'>Loading...</td></tr>";
+    // attempt to read guest_payments collection
+    const guestSnap = await getDocs(collection(db, "guest_payments"));
+    let rows = [];
+    guestSnap.forEach(docSnap => {
+      rows.push(docSnap.data());
+    });
+    // try top-level payments if present
+    try {
+      const paySnap = await getDocs(collection(db, "payments"));
+      paySnap.forEach(s => rows.push(s.data()));
+    } catch (e) {
+      // ignore if not present
+    }
+
+    if (!rows.length) {
+      adminBody.innerHTML = "<tr><td colspan='8' class='p-4'>No payments found.</td></tr>";
+      return;
+    }
+
+    adminBody.innerHTML = rows.sort((a,b)=> new Date(b.date) - new Date(a.date)).map(r => `
+      <tr class="border-b">
+        <td class="p-2">${new Date(r.date).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(r.name)}</td>
+        <td class="p-2">${escapeHtml(r.matric)}</td>
+        <td class="p-2">${escapeHtml(r.year)}</td>
+        <td class="p-2">${escapeHtml(r.feeType)}</td>
+        <td class="p-2">₦${Number(r.amount).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(r.reference)}</td>
+        <td class="p-2"><a class="text-indigo-600" href="${escapeHtml(r.receiptUrl || '#')}" target="_blank">Receipt</a></td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    console.error(err);
+    alert("Error loading admin payments. Check console.");
+  }
+}
+
+/* export admin CSV (basic) */
+function exportAdminCSV() {
+  if (!history.length) return alert("No payments to export.");
+  const rows = [["Date","Name","Matric","Year","FeeType","Amount","Reference"]];
+  history.forEach(h => rows.push([new Date(h.date).toLocaleString(), h.name, h.matric, h.year, h.feeType, h.amount, h.reference]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "PTS_All_Payments.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* Download all receipts (placeholders) */
+async function downloadAllReceipts() {
+  alert("This will attempt to download receipts for each recorded payment. In production, generate a server-side zip for efficiency.");
+  // In client: iterate history and open receiptUrl if present
+  history.forEach(h => { if (h.receiptUrl) window.open(h.receiptUrl, "_blank"); });
+}
+
+/* ------------------- Auth: anonymous sign-in for Firestore usage ------------------- */
 onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
     console.log("Signed in:", user.uid, "Anonymous:", user.isAnonymous);
+    // show admin UI if profile email matches (for demo)
     const prof = JSON.parse(localStorage.getItem("studentProfile") || "null") || {};
     if (prof.email && prof.email.toLowerCase().includes("admin")) {
       $("navAdminLi").classList.remove("hidden");
@@ -682,31 +1050,59 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-/* Admin modal helpers (client-side) */
-function openAdminModal(){ $("adminModal").classList.remove("hidden"); $("adminPasswordInput").value = ""; $("adminPasswordInput").focus(); }
-function closeAdminModal(){ $("adminModal").classList.add("hidden"); $("adminLoginMsg").classList.add("hidden"); }
-function adminLoginSubmit(){ const pw = $("adminPasswordInput").value || ""; if (pw === ADMIN_PASSWORD) { $("navAdminLi").classList.remove("hidden"); $("userRoleDisplay").innerText = "Admin"; closeAdminModal(); showSection("admin"); announce("🔓 Admin access granted (client-side)"); } else { $("adminLoginMsg").innerText = "Incorrect password."; $("adminLoginMsg").classList.remove("hidden"); } }
-
-/* Receipt preview */
+/* ------------------- Receipt preview modal ------------------- */
 async function previewReceipt() {
-  const record = { name: $("studentName").value || "N/A", matric: $("studentMatric").value || "N/A", year: $("studentYear").value || "N/A", feeType: $("paymentType").value || "N/A", amount: $("totalAmount").value || "N/A", reference: "PREVIEW_" + Date.now().toString(36) };
-  const content = `PTS Payment Receipt\n----------------------------\nDate: ${new Date().toLocaleString()}\nReference: ${record.reference}\n\nStudent Name: ${record.name}\nMatric No:    ${record.matric}\nYear:         ${record.year}\nFee Type:     ${record.feeType}\nAmount Paid:  ₦${Number(record.amount).toLocaleString()}\n\nNotes:\nThis is a preview. The real receipt is generated after a successful payment.\n`;
+  // Use current form values to create preview text
+  const record = {
+    name: $("studentName").value || "N/A",
+    matric: $("studentMatric").value || "N/A",
+    year: $("studentYear").value || "N/A",
+    feeType: $("paymentType").value || "N/A",
+    amount: $("totalAmount").value || "N/A",
+    reference: "PREVIEW_" + Date.now().toString(36)
+  };
+  const content = `
+PTS Payment Receipt
+----------------------------
+Date: ${new Date().toLocaleString()}
+Reference: ${record.reference}
+
+Student Name: ${record.name}
+Matric No:    ${record.matric}
+Year:         ${record.year}
+Fee Type:     ${record.feeType}
+Amount Paid:  ₦${Number(record.amount).toLocaleString()}
+
+Notes:
+This is a preview. The real receipt is generated after a successful payment.
+  `;
   $("receiptContent").innerText = content;
   $("receiptModal").classList.remove("hidden");
 }
-function closeReceiptModal(){ $("receiptModal").classList.add("hidden"); }
+function closeReceiptModal() {
+  $("receiptModal").classList.add("hidden");
+}
 
-/* Init */
+/* ------------------- Admin modal helper ------------------- */
+// already implemented above
+
+/* ------------------- Init ------------------- */
 document.addEventListener("DOMContentLoaded", () => {
   ensureNavButtons();
+  // default view
   showSection("dashboard");
   renderHistory();
   updateSummary();
   renderChart();
   loadProfile();
   document.querySelectorAll("#studentYear, #paymentType").forEach(i => i?.addEventListener("change", updateFees));
+
+  // restore dark mode pref
   if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
 });
+
+/* ------------------- Small helpers ------------------- */
+function escapeHtmlAttr(s) { return (s || "").replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 </script>
 </body>
 </html>
