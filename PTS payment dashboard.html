@@ -519,7 +519,7 @@ async function makePayment(){
     return;
   }
 
-  const handler = Paystack.setup({
+  const handler = PaystackPop.setup({
     key: PAYSTACK_PUBLIC_KEY,
     email,
     amount: Math.round(amount * 100),
