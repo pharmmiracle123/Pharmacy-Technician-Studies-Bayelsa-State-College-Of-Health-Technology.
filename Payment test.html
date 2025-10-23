@@ -43,7 +43,13 @@
 
     // expose needed Firebase helpers to the global script below
     window.firebase = { auth, onAuthStateChanged, signOut, db, doc, setDoc, getDoc, onSnapshot, collection, query };
-    window.initializeAppLogic(); // start app (the main script defines this)
+    window.addEventListener("load", () => {
+  if (window.initializeAppLogic) {
+    window.initializeAppLogic();
+  } else {
+    console.warn("initializeAppLogic not found yet.");
+  }
+});// start app (the main script defines this)
   </script>
 
   <style>
