@@ -402,48 +402,31 @@ function closePaymentPreview(){
 }
 
 /* ---------- Paystack flow (with split) ---------- */
-function confirmAndPay(){
+async function confirmAndPay() {
   if (!currentlyPreviewing) return showNotification('Nothing to pay', true);
   const { feeName, amount, year } = currentlyPreviewing;
   closePaymentPreview();
-
-  // prepare reference
-  const ref = 'PTS_' + Date.now();
-
-  const handler = PaystackPop.setup({
-    key: PAYSTACK_PUBLIC_KEY,
-    email: userProfile.email,
-    amount: Math.round(amount * 100), // kobo
-    currency: 'NGN',
-    ref,
-    split_code: PAYSTACK_SPLIT_CODE,
-    metadata: { payment_for: feeName, student_year: year },
-    callback: async (response) => {
-      try {
-        await savePaymentToFirestore(response, amount, feeName, year);
-        // generate/download pdf and email
-        const paymentObj = {
-          reference: response.reference,
-          amount,
-          metadata: { payment_for: feeName, student_year: year },
-          paidAt: { seconds: Math.floor(Date.now()/1000) }
-        };
-        const pdfBase64 = await generateReceiptBase64(paymentObj);
-        downloadReceiptBase64(paymentObj.reference, pdfBase64);
-        await sendReceiptEmailWithAttachment(paymentObj, pdfBase64);
-        showNotification('Payment successful — receipt downloaded & emailed.');
-      } catch (err) {
-        console.error(err);
-        showNotification('Payment saved but an error occurred (check console).', true);
-      }
-    },
-    onClose: function(){
-      showNotification('Payment window closed', true);
-    }
-  });
-  handler.openIframe();
+  
+  const ref = 'PTS_' + Date.now(); // unique reference
+  
+  try {
+    // Build Paystack hosted checkout URL
+    const paystackUrl = new URL("https://checkout.paystack.com/");
+    paystackUrl.searchParams.append("amount", Math.round(amount * 100)); // kobo
+    paystackUrl.searchParams.append("email", userProfile.email);
+    paystackUrl.searchParams.append("currency", "NGN");
+    paystackUrl.searchParams.append("reference", ref);
+    paystackUrl.searchParams.append("split_code", PAYSTACK_SPLIT_CODE);
+    paystackUrl.searchParams.append("metadata[payment_for]", feeName);
+    paystackUrl.searchParams.append("metadata[student_year]", year);
+    
+    // Redirect to Paystack hosted payment page
+    window.location.href = paystackUrl.toString();
+  } catch (err) {
+    console.error(err);
+    showNotification('Could not initiate payment', true);
+  }
 }
-
 /* ---------- Save payment to Firestore ---------- */
 async function savePaymentToFirestore(response, amount, paymentFor, year) {
   const { db, doc, setDoc } = window.firebase;
