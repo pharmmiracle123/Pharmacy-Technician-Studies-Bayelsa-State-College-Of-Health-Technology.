@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PTS Advanced Payment Dashboard</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
+  <!-- ================== FIREBASE SDKs (v9+ Modular) ================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+    // ===================================================================================
+    // ================== YOUR FIREBASE CONFIGURATION OBJECT ==================
+    // ===================================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
+      authDomain: "pts-bscht.firebaseapp.com",
+      projectId: "pts-bscht",
+      storageBucket: "pts-bscht.appspot.com",
+      messagingSenderId: "860500545291",
+      appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
+      measurementId: "G-B9NTEZYFMM"
+    };
+    // ===================================================================================
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.firebase = {
+      auth, onAuthStateChanged, signOut,
+      db, doc, setDoc, getDoc, onSnapshot, collection, query
+    };
+
+    window.initializeAppLogic();
+  </script>
+
+  <style>
+    .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
+    .modal { display: none; }
+    .modal.active { display: flex; }
+    .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
+
+  <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+  </div>
+
+  <!-- NOTE: The login/signup form ('authSection') has been completely removed from this file. -->
+
+  <div id="appContainer" class="hidden flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
+      <div class="flex items-center gap-3 mb-6">
+        <img id="logoSmall" src="logo.png" alt="logo" class="w-12 h-12 object-contain bg-white rounded p-1"/>
+        <h2 class="text-2xl font-bold">PTS Payments</h2>
+      </div>
+      <nav class="mt-4">
+        <ul class="space-y-3">
+          <li><button onclick="showSection('dashboard')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard</button></li>
+          <li><button onclick="showSection('payment')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">💳 Make Payment</button></li>
+          <li><button onclick="showSection('history')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📜 Payment History</button></li>
+          <li><button onclick="showSection('profile')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
+        </ul>
+      </nav>
+      <div class="mt-auto pt-8 space-y-3">
+        <button onclick="toggleDarkMode()" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
+        <button onclick="logoutProfile()" class="w-full bg-red-600 text-white py-2 rounded">🚪 Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+        <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
+            <div class="flex items-center gap-4">
+                <img id="logoHeader" src="logo.png" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
+                <div>
+                    <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
+                    <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="menuToggle" onclick="toggleSidebar()" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
+                <div class="text-right">
+                    <div id="userNameDisplay" class="text-sm text-gray-600 dark:text-gray-200">Not signed in</div>
+                    <div id="userEmailDisplay" class="text-xs text-gray-400"></div>
+                </div>
+            </div>
+        </header>
+        
+        <section id="notificationSection" class="hidden bg-yellow-100 text-yellow-900 p-3 rounded mb-6"></section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboardSection" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-500">Total Payments Made</h3>
+                    <p id="totalPayments" class="text-2xl font-bold text-blue-700">₦0</p>
+                </div>
+                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-500">Outstanding Balance (Year <span id="currentYearSpan"></span>)</h3>
+                    <p id="outstandingBalance" class="text-2xl font-bold text-red-600">₦0</p>
+                </div>
+                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+                    <h3 class="text-sm font-semibold text-gray-500">Department Fees Paid</h3>
+                    <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+                <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
+                <canvas id="paymentChart" height="200"></canvas>
+            </div>
+        </section>
+
+        <!-- Payment Section -->
+        <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow"></section>
+        
+        <!-- History Section -->
+        <section id="historySection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
+            <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">📜 Payment History</h2>
+            <div class="flex flex-wrap gap-3 mb-4">
+                <input id="searchHistory" oninput="renderHistory()" placeholder="🔍 Search by Ref or Fee Type" class="flex-1 border rounded px-3 py-2 dark:bg-gray-700" />
+                <button onclick="downloadHistoryPDF()" class="bg-blue-700 text-white px-4 py-2 rounded">⬇ PDF</button>
+                <button onclick="downloadHistoryExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇ Excel</button>
+                <button onclick="downloadHistoryCSV()" class="bg-yellow-500 text-white px-4 py-2 rounded">⬇ CSV</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                            <th class="p-2 text-left">Date</th>
+                            <th class="p-2 text-left">Fee Type</th>
+                            <th class="p-2 text-left">Amount</th>
+                            <th class="p-2 text-left">Ref</th>
+                            <th class="p-2 text-left">Status</th>
+                            <th class="p-2 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+                <p id="historyEmptyState" class="text-center py-8 text-gray-500 hidden">No payment history found.</p>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section id="profileSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow"></section>
+    </main>
+  </div>
+  
+  <!-- Modals (Payment Preview & Receipt) -->
+  <div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4"></div>
+
+<script>
+// ===================================================================================
+// ==================         MAIN DASHBOARD SCRIPT                         ==================
+// ===================================================================================
+
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
+const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553";
+
+const fees = {
+  1: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
+  2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
+  3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
+};
+
+const totalFeesByYear = Object.fromEntries(
+  Object.entries(fees).map(([year, feeItems]) => [
+    year, Object.values(feeItems).reduce((sum, amount) => sum + amount, 0)
+  ])
+);
+
+let paymentHistory = [];
+let currentUser = null;
+let userProfile = {};
+let unsubscribeFromPayments = null;
+
+// --- Main App Initializer with Multi-Step Security Check ---
+window.initializeAppLogic = () => {
+  const { auth, onAuthStateChanged } = window.firebase;
+
+  onAuthStateChanged(auth, user => {
+    const spinner = document.getElementById('loadingSpinner');
+    
+    if (user) {
+      // STEP 1 PASSED: User is signed in with Firebase.
+      const accessGranted = sessionStorage.getItem('paymentAccessGranted');
+      
+      if (accessGranted !== 'true') {
+        // STEP 2 FAILED: User has not passed the password gate. Redirect them.
+        console.warn("Security check failed: Access not granted. Redirecting...");
+        window.location.href = 'Payment Access.html'; // Adjust filename if needed
+        return;
+      }
+      
+      // ALL CHECKS PASSED: Load the dashboard.
+      currentUser = user;
+      document.getElementById('appContainer').classList.remove('hidden');
+      spinner.style.display = 'none';
+      
+      loadProfile();
+      listenForPayments();
+      showSection('dashboard');
+    } else {
+      // STEP 1 FAILED: User is not signed in at all. Redirect to main login page.
+      console.warn("Security check failed: No user signed in. Redirecting...");
+      window.location.href = 'PTS Login.html'; // Adjust filename if needed
+    }
+  });
+};
+
+// --- Corrected Logout Function ---
+function logoutProfile() {
+  // CRITICAL: Clear the access flag so the user must re-enter the password next time.
+  sessionStorage.removeItem('paymentAccessGranted');
+  
+  const { auth, signOut } = window.firebase;
+  signOut(auth).catch(error => showNotification(`Logout Error: ${error.message}`, true));
+  // The onAuthStateChanged listener will automatically redirect to the login page.
+}
+window.logoutProfile = logoutProfile;
+
+// --- Profile Management ---
+async function loadProfile() {
+  if (!currentUser) return;
+  const { db, doc, getDoc } = window.firebase;
+  const userDocRef = doc(db, "users", currentUser.uid);
+
+  const docSnap = await getDoc(userDocRef);
+  if (docSnap.exists()) {
+    userProfile = docSnap.data();
+    updateUIWithProfile(userProfile);
+  } else {
+    // For new users, use email from auth as a default
+    userProfile = { email: currentUser.email };
+    updateUIWithProfile(userProfile);
+  }
+}
+
+function updateUIWithProfile(profile) {
+    document.getElementById("userNameDisplay").innerText = profile.name || "No Name Set";
+    document.getElementById("userEmailDisplay").innerText = profile.email || "";
+}
+
+// --- Payment & History (Real-time) ---
+function listenForPayments() {
+  if (unsubscribeFromPayments) unsubscribeFromPayments();
+  if (!currentUser) return;
+
+  const { db, collection, onSnapshot, query } = window.firebase;
+  const paymentsColRef = collection(db, "users", currentUser.uid, "payments");
+  const q = query(paymentsColRef); // Can add ordering here later if needed
+
+  unsubscribeFromPayments = onSnapshot(q, (snapshot) => {
+    paymentHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    paymentHistory.sort((a, b) => b.paidAt.toMillis() - a.paidAt.toMillis());
+    
+    renderHistory();
+    updateSummary();
+    // Chart rendering logic would go here
+  });
+}
+
+function renderHistory() {
+  const tbody = document.getElementById("historyTable");
+  const emptyState = document.getElementById("historyEmptyState");
+  const searchQuery = document.getElementById("searchHistory").value.toLowerCase();
+
+  const filtered = paymentHistory.filter(h =>
+    (h.reference || "").toLowerCase().includes(searchQuery) ||
+    (h.metadata.payment_for || "").toLowerCase().includes(searchQuery)
+  );
+
+  emptyState.classList.toggle('hidden', filtered.length > 0);
+  tbody.innerHTML = filtered.map(h => {
+    let statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 rounded-full">${escapeHtml(h.status)}</span>`;
+    if (h.status === 'success') {
+      statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">Succeeded</span>`;
+    } else if (h.status === 'failed') {
+      statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Failed</span>`;
+    }
+    return `
+      <tr class="border-b dark:border-gray-700">
+        <td class="p-2">${h.paidAt.toDate().toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(h.metadata.payment_for || "N/A")}</td>
+        <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(h.reference || "-")}</td>
+        <td class="p-2">${statusBadge}</td>
+        <td class="p-2">
+          ${h.status === 'success' ? `<button onclick="viewReceipt('${h.id}')" class="bg-purple-600 text-white px-3 py-1 text-xs rounded">View Receipt</button>` : ''}
+        </td>
+      </tr>`;
+  }).join("");
+}
+window.renderHistory = renderHistory;
+
+// --- Summary & Dashboard Calculations ---
+function updateSummary() {
+  let totalPaid = 0;
+  let deptFees = 0;
+  let paidForCurrentYear = 0;
+  const currentStudentYear = userProfile.year;
+
+  paymentHistory.forEach(h => {
+    if (h.status !== 'success') return;
+    const amount = Number(h.amount) || 0;
+    totalPaid += amount;
+    if ((h.metadata.payment_for || "").toLowerCase().includes("departmental")) deptFees += amount;
+    if (h.metadata.student_year == currentStudentYear) paidForCurrentYear += amount;
+  });
+
+  document.getElementById("totalPayments").innerText = "₦" + totalPaid.toLocaleString();
+  document.getElementById("totalDept").innerText = "₦" + deptFees.toLocaleString();
+
+  if (currentStudentYear && totalFeesByYear[currentStudentYear]) {
+    const outstanding = totalFeesByYear[currentStudentYear] - paidForCurrentYear;
+    document.getElementById("outstandingBalance").innerText = "₦" + (outstanding > 0 ? outstanding.toLocaleString() : '0');
+    document.getElementById("currentYearSpan").innerText = currentStudentYear;
+  } else {
+    document.getElementById("outstandingBalance").innerText = "N/A";
+    document.getElementById("currentYearSpan").innerText = "";
+  }
+}
+
+// --- All other utility functions (makePayment, viewReceipt, export functions, etc.) would follow ---
+// These are unchanged from the previous "Advanced" version and can be copied in.
+// For brevity in this response, only the core corrected logic is shown, but a full implementation
+// would include all the helper functions for UI, exports, and payment handling.
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+}
+
+function showSection(sectionName) {
+    // This function hides all main sections and shows the requested one
+    const sections = ['dashboardSection', 'paymentSection',    'historySection', 'profileSection'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+    const activeSection = document.getElementById(sectionName + 'Section');
+    if (activeSection) activeSection.classList.remove('hidden');
+}
+window.showSection = showSection;
+</script>
+</body>
+</html>
