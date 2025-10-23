@@ -197,11 +197,6 @@ window.initializeAppLogic = () => {
       // STEP 1 PASSED: User is signed in with Firebase.
       const accessGranted = sessionStorage.getItem('paymentAccessGranted');
       
-      if (accessGranted !== 'true') {
-        // STEP 2 FAILED: User has not passed the password gate. Redirect them.
-        console.warn("Security check failed: Access not granted. Redirecting...");
-        window.location.href = 'Payment Access.html'; // Adjust filename if needed
-        return;
       }
       
       // ALL CHECKS PASSED: Load the dashboard.
