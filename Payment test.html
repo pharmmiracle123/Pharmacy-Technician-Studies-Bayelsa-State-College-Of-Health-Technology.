@@ -1,31 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PTS Advanced Payment Dashboard</title>
-  
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- EmailJS for sending emails from static site -->
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script>
-  (function() {
-    emailjs.init("YOUR_PUBLIC_KEY_HERE");
-  })();
-</script>
+  <script>
+    (function(){ 
+      // Replace with your EmailJS public key
+      emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+    })();
+  </script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
-  <!-- ================== FIREBASE SDKs (v9+ Modular) ================== -->
+  <!-- FIREBASE SDKs (v9 modular) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-    // ===================================================================================
-    // ================== YOUR FIREBASE CONFIGURATION OBJECT ==================
-    // ===================================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
       authDomain: "pts-bscht.firebaseapp.com",
@@ -35,24 +36,20 @@
       appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
       measurementId: "G-B9NTEZYFMM"
     };
-    // ===================================================================================
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    window.firebase = {
-      auth, onAuthStateChanged, signOut,
-      db, doc, setDoc, getDoc, onSnapshot, collection, query
-    };
-
-    window.initializeAppLogic();
+    // expose needed Firebase helpers to the global script below
+    window.firebase = { auth, onAuthStateChanged, signOut, db, doc, setDoc, getDoc, onSnapshot, collection, query };
+    window.initializeAppLogic(); // start app (the main script defines this)
   </script>
 
   <style>
     .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
     .modal { display: none; }
-    .modal.active { display: flex; }
+    .modal.active { display: flex; align-items: center; justify-content: center; }
     .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -60,18 +57,20 @@
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
 
   <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-28 w-28"></div>
   </div>
-
-  <!-- NOTE: The login/signup form ('authSection') has been completely removed from this file. -->
 
   <div id="appContainer" class="hidden flex">
     <!-- Sidebar -->
     <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
       <div class="flex items-center gap-3 mb-6">
         <img id="logoSmall" src="logo.png" alt="logo" class="w-12 h-12 object-contain bg-white rounded p-1"/>
-        <h2 class="text-2xl font-bold">PTS Payments</h2>
+        <div>
+          <h2 class="text-2xl font-bold">PTS Payments</h2>
+          <p id="sidebarUserName" class="text-sm opacity-90"></p>
+        </div>
       </div>
+
       <nav class="mt-4">
         <ul class="space-y-3">
           <li><button onclick="showSection('dashboard')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">🏠 Dashboard</button></li>
@@ -80,102 +79,171 @@
           <li><button onclick="showSection('profile')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
         </ul>
       </nav>
+
       <div class="mt-auto pt-8 space-y-3">
         <button onclick="toggleDarkMode()" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
         <button onclick="logoutProfile()" class="w-full bg-red-600 text-white py-2 rounded">🚪 Logout</button>
       </div>
     </aside>
 
-    <!-- Main Content -->
+    <!-- Main -->
     <main class="flex-1 p-6">
-        <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
-            <div class="flex items-center gap-4">
-                <img id="logoHeader" src="logo.png" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
-                <div>
-                    <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
-                    <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <button id="menuToggle" onclick="toggleSidebar()" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
-                <div class="text-right">
-                    <div id="userNameDisplay" class="text-sm text-gray-600 dark:text-gray-200">Not signed in</div>
-                    <div id="userEmailDisplay" class="text-xs text-gray-400"></div>
-                </div>
-            </div>
-        </header>
-        
-        <section id="notificationSection" class="hidden bg-yellow-100 text-yellow-900 p-3 rounded mb-6"></section>
+      <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
+        <div class="flex items-center gap-4">
+          <img id="logoHeader" src="logo.png" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
+          <div>
+            <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
+            <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
+          </div>
+        </div>
 
-        <!-- Dashboard Section -->
-        <section id="dashboardSection" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-                    <h3 class="text-sm font-semibold text-gray-500">Total Payments Made</h3>
-                    <p id="totalPayments" class="text-2xl font-bold text-blue-700">₦0</p>
-                </div>
-                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-                    <h3 class="text-sm font-semibold text-gray-500">Outstanding Balance (Year <span id="currentYearSpan"></span>)</h3>
-                    <p id="outstandingBalance" class="text-2xl font-bold text-red-600">₦0</p>
-                </div>
-                <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-                    <h3 class="text-sm font-semibold text-gray-500">Department Fees Paid</h3>
-                    <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
-                </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
-                <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
-                <canvas id="paymentChart" height="200"></canvas>
-            </div>
-        </section>
+        <div class="flex items-center gap-3">
+          <button id="menuToggle" onclick="toggleSidebar()" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
+          <div class="text-right">
+            <div id="userNameDisplay" class="text-sm text-gray-600 dark:text-gray-200">Not signed in</div>
+            <div id="userEmailDisplay" class="text-xs text-gray-400"></div>
+          </div>
+          <img id="authPhoto" src="" alt="User" class="h-10 w-10 rounded-full ml-3 object-cover hidden"/>
+        </div>
+      </header>
 
-        <!-- Payment Section -->
-        <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow"></section>
-        
-        <!-- History Section -->
-        <section id="historySection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
-            <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">📜 Payment History</h2>
-            <div class="flex flex-wrap gap-3 mb-4">
-                <input id="searchHistory" oninput="renderHistory()" placeholder="🔍 Search by Ref or Fee Type" class="flex-1 border rounded px-3 py-2 dark:bg-gray-700" />
-                <button onclick="downloadHistoryPDF()" class="bg-blue-700 text-white px-4 py-2 rounded">⬇ PDF</button>
-                <button onclick="downloadHistoryExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇ Excel</button>
-                <button onclick="downloadHistoryCSV()" class="bg-yellow-500 text-white px-4 py-2 rounded">⬇ CSV</button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full table-auto text-sm">
-                    <thead class="bg-gray-100 dark:bg-gray-700">
-                        <tr>
-                            <th class="p-2 text-left">Date</th>
-                            <th class="p-2 text-left">Fee Type</th>
-                            <th class="p-2 text-left">Amount</th>
-                            <th class="p-2 text-left">Ref</th>
-                            <th class="p-2 text-left">Status</th>
-                            <th class="p-2 text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTable"></tbody>
-                </table>
-                <p id="historyEmptyState" class="text-center py-8 text-gray-500 hidden">No payment history found.</p>
-            </div>
-        </section>
+      <section id="notificationSection" class="hidden bg-yellow-100 text-yellow-900 p-3 rounded mb-6"></section>
 
-        <!-- Profile Section -->
-        <section id="profileSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow"></section>
+      <!-- Dashboard -->
+      <section id="dashboardSection" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-500">Total Payments Made</h3>
+            <p id="totalPayments" class="text-2xl font-bold text-blue-700">₦0</p>
+          </div>
+          <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-500">Outstanding Balance (Year <span id="currentYearSpan"></span>)</h3>
+            <p id="outstandingBalance" class="text-2xl font-bold text-red-600">₦0</p>
+          </div>
+          <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-500">Department Fees Paid</h3>
+            <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+          <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
+          <canvas id="paymentChart" height="200"></canvas>
+        </div>
+      </section>
+
+      <!-- Payment -->
+      <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
+        <h2 class="text-lg font-bold mb-4 text-blue-900 dark:text-white">Choose Fee (organized by Year)</h2>
+
+        <!-- Fees by Year cards -->
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
+            <h3 class="font-semibold mb-3">Year 1 Fees</h3>
+            <ul id="year1List" class="space-y-2"></ul>
+          </div>
+          <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
+            <h3 class="font-semibold mb-3">Year 2 Fees</h3>
+            <ul id="year2List" class="space-y-2"></ul>
+          </div>
+          <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
+            <h3 class="font-semibold mb-3">Year 3 Fees</h3>
+            <ul id="year3List" class="space-y-2"></ul>
+          </div>
+        </div>
+
+        <p class="text-sm text-gray-500 mt-4">Click a fee's <em>Pay</em> button to preview and confirm payment.</p>
+      </section>
+
+      <!-- History -->
+      <section id="historySection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
+        <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">📜 Payment History</h2>
+
+        <div class="flex flex-wrap gap-3 mb-4">
+          <input id="searchHistory" oninput="renderHistory()" placeholder="🔍 Search by Ref or Fee Type" class="flex-1 border rounded px-3 py-2 dark:bg-gray-700" />
+          <button onclick="downloadHistoryPDF()" class="bg-blue-700 text-white px-4 py-2 rounded">⬇ PDF</button>
+          <button onclick="downloadHistoryExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇ Excel</button>
+          <button onclick="downloadHistoryCSV()" class="bg-yellow-500 text-white px-4 py-2 rounded">⬇ CSV</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full table-auto text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+              <tr>
+                <th class="p-2 text-left">Date</th>
+                <th class="p-2 text-left">Fee Type</th>
+                <th class="p-2 text-left">Amount</th>
+                <th class="p-2 text-left">Ref</th>
+                <th class="p-2 text-left">Status</th>
+                <th class="p-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+          <p id="historyEmptyState" class="text-center py-8 text-gray-500 hidden">No payment history found.</p>
+        </div>
+      </section>
+
+      <!-- Profile -->
+      <section id="profileSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
+        <div class="flex items-center gap-6">
+          <img id="profilePhotoLarge" class="h-24 w-24 rounded-full object-cover" src="" alt="Profile"/>
+          <div>
+            <h2 id="profileNameLarge" class="text-xl font-bold"></h2>
+            <p id="profileEmailLarge" class="text-sm text-gray-500"></p>
+            <p id="profileYearLarge" class="mt-2"></p>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
-  
-  <!-- Modals (Payment Preview & Receipt) -->
-  <div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4"></div>
+
+  <!-- PAYMENT PREVIEW MODAL -->
+  <div id="paymentPreviewModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative">
+      <button onclick="closePaymentPreview()" class="absolute top-2 right-2 text-gray-500">✖</button>
+      <div class="flex items-center gap-4">
+        <img id="previewPhoto" src="" alt="photo" class="h-16 w-16 rounded-full object-cover"/>
+        <div>
+          <h3 id="previewName" class="text-lg font-bold"></h3>
+          <p id="previewEmail" class="text-sm text-gray-500"></p>
+        </div>
+      </div>
+
+      <hr class="my-4">
+      <div>
+        <p class="text-sm text-gray-600">Fee</p>
+        <h4 id="previewFeeName" class="text-xl font-semibold"></h4>
+        <p class="text-sm text-gray-600 mt-2">Year: <span id="previewYear"></span></p>
+        <p class="text-2xl font-bold mt-4 text-blue-700" id="previewAmount">₦0</p>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button id="confirmPayBtn" class="flex-1 bg-green-600 text-white py-2 rounded">Pay Now</button>
+        <button onclick="closePaymentPreview()" class="flex-1 bg-gray-500 text-white py-2 rounded">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT MODAL (viewing receipt in-app) -->
+  <div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
+    <div id="receiptModalContent" class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative"></div>
+  </div>
 
 <script>
 /* ==========================================================================
-   PTS DASHBOARD SCRIPT — WITH AUTO RECEIPT GENERATION + EMAILJS SUPPORT
+   PTS DASHBOARD SCRIPT — polished: auth profile pic/name, fee groups,
+   preview modal, paystack split, Firestore save, jsPDF receipt + EmailJS
    ========================================================================== */
 
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
-const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553";
+/* ---------- CONFIG (replace placeholders) ---------- */
+const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // e.g. pk_live_...
+const PAYSTACK_SPLIT_CODE  = "SPL_Ijp4pkn553"; // your split code (already present)
+const EMAILJS_SERVICE_ID   = "YOUR_EMAILJS_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID  = "YOUR_EMAILJS_TEMPLATE_ID";
 
-// --------------------------- FEE CONFIGURATION ---------------------------
+/* ---------- Fee definitions (clear separation per year) ---------- */
 const fees = {
   1: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
@@ -183,248 +251,435 @@ const fees = {
 };
 
 const totalFeesByYear = Object.fromEntries(
-  Object.entries(fees).map(([year, feeItems]) => [
-    year, Object.values(feeItems).reduce((sum, a) => sum + a, 0)
-  ])
+  Object.entries(fees).map(([year, feeItems]) => [year, Object.values(feeItems).reduce((s,a) => s+a, 0)])
 );
 
+/* ---------- App state ---------- */
 let currentUser = null;
-let userProfile = {};
+let userProfile = { name: null, email: null, photoURL: null, year: 1 };
 let paymentHistory = [];
 let unsubscribeFromPayments = null;
+let currentlyPreviewing = null; // { year, feeName, amount }
 
-// --------------------------- INITIALIZATION ---------------------------
+/* ---------- Utility helpers ---------- */
+function showNotification(msg, isError=false) {
+  const note = document.getElementById('notificationSection');
+  note.classList.remove('hidden');
+  note.textContent = msg;
+  note.className = `p-3 rounded mb-6 ${isError ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900'}`;
+  setTimeout(()=> note.classList.add('hidden'), 4000);
+}
+
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+/* ---------- Initialization (called by the firebase module script) ---------- */
 window.initializeAppLogic = () => {
   const { auth, onAuthStateChanged } = window.firebase;
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth, async (user) => {
     const spinner = document.getElementById('loadingSpinner');
     if (user) {
       currentUser = user;
+      // set basic profile from auth
+      userProfile.name = user.displayName || user.email.split('@')[0];
+      userProfile.email = user.email;
+      userProfile.photoURL = user.photoURL || "";
+      // Try to fetch stored profile (year, name override, photo override) from Firestore
+      try {
+        const { db, doc, getDoc } = window.firebase;
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          userProfile = {
+            name: data.name || userProfile.name,
+            email: data.email || userProfile.email,
+            photoURL: data.photoURL || userProfile.photoURL,
+            year: data.year || userProfile.year
+          };
+        }
+      } catch (e) {
+        console.warn("Could not load user doc:", e);
+      }
+
+      // update UI
       document.getElementById('appContainer').classList.remove('hidden');
       spinner.style.display = 'none';
-      loadProfile();
+      updateUIWithProfile(userProfile);
+      renderFeesByYear();
       listenForPayments();
-      renderPaymentSection();
       showSection('dashboard');
     } else {
+      // not signed in — redirect to your login page
       window.location.href = 'PTS Login.html';
     }
   });
 };
 
-// --------------------------- LOGOUT ---------------------------
-function logoutProfile() {
+/* ---------- Logout ---------- */
+function logoutProfile(){
   const { auth, signOut } = window.firebase;
   signOut(auth);
 }
 window.logoutProfile = logoutProfile;
 
-// --------------------------- PROFILE ---------------------------
-async function loadProfile() {
-  const { db, doc, getDoc } = window.firebase;
-  const ref = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(ref);
-  userProfile = snap.exists() ? snap.data() : { email: currentUser.email, year: 1 };
-  updateUIWithProfile(userProfile);
-}
-function updateUIWithProfile(profile) {
+/* ---------- UI Profile update ---------- */
+function updateUIWithProfile(profile){
   document.getElementById("userNameDisplay").innerText = profile.name || "No Name";
   document.getElementById("userEmailDisplay").innerText = profile.email || "";
-}
+  document.getElementById("sidebarUserName").innerText = profile.name || "";
 
-// --------------------------- PAYMENT SECTION ---------------------------
-function renderPaymentSection() {
-  const section = document.getElementById("paymentSection");
-  const yearFees = fees[userProfile.year] || fees[1];
-
-  section.innerHTML = `
-    <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
-    <div class="space-y-4">
-      <select id="paymentType" class="border p-2 rounded w-full dark:bg-gray-700">
-        <option value="">Select Fee Type</option>
-        ${Object.entries(yearFees).map(([k, v]) => `<option value="${k}">${k} - ₦${v.toLocaleString()}</option>`).join("")}
-      </select>
-      <button onclick="initiatePayment()" class="bg-blue-700 text-white px-4 py-2 rounded w-full">Proceed to Pay</button>
-    </div>
-  `;
-}
-window.renderPaymentSection = renderPaymentSection;
-
-function initiatePayment() {
-  const paymentFor = document.getElementById('paymentType').value;
-  if (!paymentFor) return alert('Please select a fee type.');
-
-  const amount = fees[userProfile.year]?.[paymentFor];
-  if (!amount) return alert('Invalid fee type.');
-
-  if (confirm(`Confirm payment of ₦${amount.toLocaleString()} for ${paymentFor}?`)) {
-    makePayment(amount, userProfile.email, userProfile.name, paymentFor);
+  const img = document.getElementById("authPhoto");
+  const imgLarge = document.getElementById("profilePhotoLarge");
+  if (profile.photoURL) {
+    img.src = profile.photoURL; img.classList.remove('hidden');
+    imgLarge.src = profile.photoURL;
+  } else {
+    img.classList.add('hidden');
   }
+  document.getElementById("profileNameLarge").innerText = profile.name || "";
+  document.getElementById("profileEmailLarge").innerText = profile.email || "";
+  document.getElementById("profileYearLarge").innerText = `Year: ${profile.year || 1}`;
 }
 
-// --------------------------- PAYSTACK INTEGRATION ---------------------------
-function makePayment(amount, email, name, paymentFor) {
+/* ---------- Render fees into three lists (separate and clear) ---------- */
+function renderFeesByYear(){
+  const year1List = document.getElementById('year1List');
+  const year2List = document.getElementById('year2List');
+  const year3List = document.getElementById('year3List');
+
+  const buildList = (container, year) => {
+    const feeObj = fees[year] || {};
+    container.innerHTML = Object.entries(feeObj).map(([k,v]) => `
+      <li class="flex items-center justify-between">
+        <div>
+          <div class="font-medium">${k}</div>
+          <div class="text-xs text-gray-500">₦${v.toLocaleString()}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="bg-yellow-500 text-white px-3 py-1 rounded text-sm" onclick="previewFee(${year}, ${JSON.stringify(k)}, ${v})">Preview</button>
+          <button class="bg-blue-700 text-white px-3 py-1 rounded text-sm" onclick="previewFee(${year}, ${JSON.stringify(k)}, ${v})">Pay</button>
+        </div>
+      </li>
+    `).join('');
+  };
+
+  buildList(year1List, 1);
+  buildList(year2List, 2);
+  buildList(year3List, 3);
+}
+
+/* ---------- Payment Preview modal ---------- */
+function previewFee(year, feeName, amount){
+  currentlyPreviewing = { year, feeName, amount };
+  document.getElementById('previewPhoto').src = userProfile.photoURL || 'logo.png';
+  document.getElementById('previewName').innerText = userProfile.name || userProfile.email;
+  document.getElementById('previewEmail').innerText = userProfile.email || '';
+  document.getElementById('previewFeeName').innerText = feeName;
+  document.getElementById('previewYear').innerText = year;
+  document.getElementById('previewAmount').innerText = `₦${Number(amount).toLocaleString()}`;
+  document.getElementById('paymentPreviewModal').classList.add('active');
+
+  // attach handler to confirm button (replace previous listener)
+  const btn = document.getElementById('confirmPayBtn');
+  btn.onclick = () => confirmAndPay();
+}
+
+function closePaymentPreview(){
+  document.getElementById('paymentPreviewModal').classList.remove('active');
+  currentlyPreviewing = null;
+}
+
+/* ---------- Paystack flow (with split) ---------- */
+function confirmAndPay(){
+  if (!currentlyPreviewing) return showNotification('Nothing to pay', true);
+  const { feeName, amount, year } = currentlyPreviewing;
+  closePaymentPreview();
+
+  // prepare reference
+  const ref = 'PTS_' + Date.now();
+
   const handler = PaystackPop.setup({
     key: PAYSTACK_PUBLIC_KEY,
-    email: email,
-    amount: amount * 100,
+    email: userProfile.email,
+    amount: Math.round(amount * 100), // kobo
     currency: 'NGN',
-    ref: 'PTS_' + Date.now(),
+    ref,
     split_code: PAYSTACK_SPLIT_CODE,
-    metadata: { payment_for: paymentFor, student_year: userProfile.year },
-    callback: (response) => {
-      savePaymentToFirestore(response, amount, paymentFor);
-      alert('✅ Payment successful! Receipt generated & sent via email.');
+    metadata: { payment_for: feeName, student_year: year },
+    callback: async (response) => {
+      try {
+        await savePaymentToFirestore(response, amount, feeName, year);
+        // generate/download pdf and email
+        const paymentObj = {
+          reference: response.reference,
+          amount,
+          metadata: { payment_for: feeName, student_year: year },
+          paidAt: { seconds: Math.floor(Date.now()/1000) }
+        };
+        const pdfBase64 = await generateReceiptBase64(paymentObj);
+        downloadReceiptBase64(paymentObj.reference, pdfBase64);
+        await sendReceiptEmailWithAttachment(paymentObj, pdfBase64);
+        showNotification('Payment successful — receipt downloaded & emailed.');
+      } catch (err) {
+        console.error(err);
+        showNotification('Payment saved but an error occurred (check console).', true);
+      }
     },
-    onClose: () => alert('Payment cancelled.')
+    onClose: function(){
+      showNotification('Payment window closed', true);
+    }
   });
   handler.openIframe();
 }
 
-// --------------------------- FIRESTORE SAVE ---------------------------
-async function savePaymentToFirestore(response, amount, paymentFor) {
+/* ---------- Save payment to Firestore ---------- */
+async function savePaymentToFirestore(response, amount, paymentFor, year) {
   const { db, doc, setDoc } = window.firebase;
   const payRef = doc(db, "users", currentUser.uid, "payments", response.reference);
   const data = {
     reference: response.reference,
     amount,
     status: 'success',
-    metadata: { payment_for: paymentFor, student_year: userProfile.year },
+    metadata: { payment_for: paymentFor, student_year: year },
     paidAt: new Date()
   };
   await setDoc(payRef, data);
-
-  // Generate and email receipt immediately
-  const paymentData = { ...data, id: response.reference };
-  generateReceiptPDF(paymentData);
-  sendReceiptEmail(paymentData);
 }
 
-// --------------------------- RECEIPT GENERATION ---------------------------
-function generateReceiptPDF(p) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.text("PTS PAYMENT RECEIPT", 70, 20);
-  doc.text(`Name: ${userProfile.name}`, 20, 40);
-  doc.text(`Payment For: ${p.metadata.payment_for}`, 20, 50);
-  doc.text(`Amount: ₦${p.amount.toLocaleString()}`, 20, 60);
-  doc.text(`Ref: ${p.reference}`, 20, 70);
-  doc.text(`Date: ${new Date(p.paidAt).toLocaleString()}`, 20, 80);
-  doc.save(`PTS_Receipt_${p.reference}.pdf`);
+/* ---------- Helpers to normalize paidAt to Date ---------- */
+function paidAtToDate(paidAt){
+  if (!paidAt) return new Date();
+  // handle Firestore Timestamp-like object
+  if (typeof paidAt.toDate === 'function') return paidAt.toDate();
+  if (paidAt.seconds) return new Date(paidAt.seconds * 1000);
+  if (paidAt instanceof Date) return paidAt;
+  return new Date(paidAt);
 }
 
-// --------------------------- EMAIL RECEIPT (EMAILJS) ---------------------------
-async function sendReceiptEmail(p) {
-  try {
-    await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
-      to_name: userProfile.name,
-      to_email: userProfile.email,
-      payment_for: p.metadata.payment_for,
-      amount: "₦" + p.amount.toLocaleString(),
-      reference: p.reference,
-      date: new Date(p.paidAt).toLocaleString(),
-    });
-    console.log("✅ Receipt email sent to " + userProfile.email);
-  } catch (error) {
-    console.error("❌ Failed to send receipt email:", error);
-  }
-}
-
-// --------------------------- PAYMENT HISTORY ---------------------------
-function listenForPayments() {
+/* ---------- PAYMENT HISTORY listener ---------- */
+function listenForPayments(){
   const { db, collection, onSnapshot, query } = window.firebase;
   const q = query(collection(db, "users", currentUser.uid, "payments"));
   unsubscribeFromPayments = onSnapshot(q, snapshot => {
     paymentHistory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    paymentHistory.sort((a, b) => b.paidAt.toDate() - a.paidAt.toDate());
+    // ensure amounts are numbers and sort by date
+    paymentHistory.forEach(p => { p.amount = Number(p.amount || 0); });
+    paymentHistory.sort((a,b) => paidAtToDate(b.paidAt) - paidAtToDate(a.paidAt));
     renderHistory();
     updateSummary();
   });
 }
 
-// --------------------------- HISTORY RENDER ---------------------------
-function renderHistory() {
-  const table = document.getElementById("historyTable");
-  const search = document.getElementById("searchHistory").value.toLowerCase();
+/* ---------- Render history table ---------- */
+function renderHistory(){
+  const table = document.getElementById('historyTable');
+  const search = (document.getElementById('searchHistory').value || '').toLowerCase();
   const filtered = paymentHistory.filter(p =>
-    (p.reference || "").toLowerCase().includes(search) ||
-    (p.metadata?.payment_for || "").toLowerCase().includes(search)
+    (p.reference || '').toLowerCase().includes(search) ||
+    (p.metadata?.payment_for || '').toLowerCase().includes(search)
   );
 
-  if (!filtered.length) {
-    document.getElementById("historyEmptyState").classList.remove("hidden");
-    table.innerHTML = "";
+  if (!filtered.length){
+    document.getElementById('historyEmptyState').classList.remove('hidden');
+    table.innerHTML = '';
     return;
   }
+  document.getElementById('historyEmptyState').classList.add('hidden');
 
-  document.getElementById("historyEmptyState").classList.add("hidden");
-  table.innerHTML = filtered.map(p => `
-    <tr class="border-b dark:border-gray-700">
-      <td class="p-2">${new Date(p.paidAt.seconds * 1000).toLocaleString()}</td>
-      <td class="p-2">${p.metadata.payment_for}</td>
-      <td class="p-2">₦${p.amount.toLocaleString()}</td>
-      <td class="p-2">${p.reference}</td>
-      <td class="p-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Success</span></td>
-      <td class="p-2"><button onclick="downloadReceiptPDF('${p.id}')" class="bg-purple-700 text-white px-3 py-1 rounded text-xs">Receipt</button></td>
-    </tr>
-  `).join("");
+  table.innerHTML = filtered.map(p => {
+    const date = paidAtToDate(p.paidAt).toLocaleString();
+    return `
+      <tr class="border-b dark:border-gray-700">
+        <td class="p-2">${date}</td>
+        <td class="p-2">${escapeHtml(p.metadata?.payment_for || '-')}</td>
+        <td class="p-2">₦${Number(p.amount).toLocaleString()}</td>
+        <td class="p-2">${escapeHtml(p.reference || '-')}</td>
+        <td class="p-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Succeeded</span></td>
+        <td class="p-2"><button class="bg-purple-700 text-white px-3 py-1 rounded text-xs" onclick="viewReceipt('${p.id}')">Receipt</button></td>
+      </tr>
+    `;
+  }).join('');
 }
 
-// --------------------------- DOWNLOAD RECEIPT ---------------------------
-function downloadReceiptPDF(id) {
-  const { jsPDF } = window.jspdf;
+/* ---------- View receipt in modal ---------- */
+function viewReceipt(id){
   const p = paymentHistory.find(x => x.id === id);
   if (!p) return;
+  const modal = document.getElementById('receiptModalContent');
+  modal.innerHTML = `
+    <button onclick="closeReceipt()" class="absolute top-2 right-2 text-gray-500">✖</button>
+    <h2 class="text-xl font-bold mb-3">Payment Receipt</h2>
+    <div class="receipt-mono text-sm space-y-2">
+      <p><b>Name:</b> ${escapeHtml(userProfile.name)}</p>
+      <p><b>Email:</b> ${escapeHtml(userProfile.email)}</p>
+      <p><b>Payment For:</b> ${escapeHtml(p.metadata?.payment_for || '')}</p>
+      <p><b>Amount:</b> ₦${Number(p.amount).toLocaleString()}</p>
+      <p><b>Reference:</b> ${escapeHtml(p.reference)}</p>
+      <p><b>Date:</b> ${paidAtToDate(p.paidAt).toLocaleString()}</p>
+    </div>
+    <div class="mt-4 flex justify-between">
+      <button onclick="downloadReceiptPDF('${id}')" class="bg-blue-700 text-white px-3 py-1 rounded">⬇ PDF</button>
+      <button onclick="closeReceipt()" class="bg-gray-500 text-white px-3 py-1 rounded">Close</button>
+    </div>
+  `;
+  document.getElementById('receiptModal').classList.add('active');
+}
+function closeReceipt(){ document.getElementById('receiptModal').classList.remove('active'); }
+
+/* ---------- Download receipt PDF for a specific payment ---------- */
+function downloadReceiptPDF(id){
+  const p = paymentHistory.find(x => x.id === id);
+  if (!p) return;
+  const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.text("PTS PAYMENT RECEIPT", 70, 20);
-  doc.text(`Name: ${userProfile.name}`, 20, 40);
-  doc.text(`Payment For: ${p.metadata.payment_for}`, 20, 50);
-  doc.text(`Amount: ₦${p.amount.toLocaleString()}`, 20, 60);
-  doc.text(`Ref: ${p.reference}`, 20, 70);
-  doc.text(`Date: ${new Date(p.paidAt.seconds * 1000).toLocaleString()}`, 20, 80);
+  doc.setFontSize(14);
+  doc.text("PTS PAYMENT RECEIPT", 20, 20);
+  doc.setFontSize(10);
+  doc.text(`Name: ${userProfile.name}`, 20, 36);
+  doc.text(`Email: ${userProfile.email}`, 20, 44);
+  doc.text(`Payment For: ${p.metadata?.payment_for || ''}`, 20, 52);
+  doc.text(`Amount: ₦${Number(p.amount).toLocaleString()}`, 20, 60);
+  doc.text(`Reference: ${p.reference}`, 20, 68);
+  doc.text(`Date: ${paidAtToDate(p.paidAt).toLocaleString()}`, 20, 76);
   doc.save(`PTS_Receipt_${p.reference}.pdf`);
 }
 
-// --------------------------- SUMMARY & CHART ---------------------------
-function updateSummary() {
-  const total = paymentHistory.filter(p => p.status === "success").reduce((a, c) => a + c.amount, 0);
-  const dept = paymentHistory.filter(p => p.metadata.payment_for.includes("Departmental")).reduce((a, c) => a + c.amount, 0);
-  const year = userProfile.year;
-  const paidForYear = paymentHistory.filter(p => p.metadata.student_year === year).reduce((a, c) => a + c.amount, 0);
+/* ---------- generate base64 PDF (for emailing as attachment) ---------- */
+async function generateReceiptBase64(p){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14);
+  doc.text("PTS PAYMENT RECEIPT", 20, 20);
+  doc.setFontSize(10);
+  doc.text(`Name: ${userProfile.name}`, 20, 36);
+  doc.text(`Email: ${userProfile.email}`, 20, 44);
+  doc.text(`Payment For: ${p.metadata?.payment_for || ''}`, 20, 52);
+  doc.text(`Amount: ₦${Number(p.amount).toLocaleString()}`, 20, 60);
+  doc.text(`Reference: ${p.reference}`, 20, 68);
+  doc.text(`Date: ${paidAtToDate(p.paidAt).toLocaleString()}`, 20, 76);
+
+  // returns base64 without data URI prefix
+  const datauri = doc.output('datauristring');
+  return datauri.split(',')[1];
+}
+
+/* ---------- download base64 PDF ---------- */
+function downloadReceiptBase64(reference, base64){
+  const link = document.createElement('a');
+  link.href = "data:application/pdf;base64," + base64;
+  link.download = `PTS_Receipt_${reference}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+/* ---------- Send receipt via EmailJS with attachment ---------- */
+async function sendReceiptEmailWithAttachment(p, pdfBase64){
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID) {
+    console.warn('EmailJS service/template not set — skip sending email.');
+    return;
+  }
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_name: userProfile.name,
+      to_email: userProfile.email,
+      payment_for: p.metadata?.payment_for || '',
+      amount: "₦" + Number(p.amount).toLocaleString(),
+      reference: p.reference,
+      date: paidAtToDate(p.paidAt).toLocaleString(),
+      attachment: pdfBase64 // EmailJS supports base64 attachments if template allows
+    });
+    console.log('Email sent to', userProfile.email);
+  } catch (err) {
+    console.error('EmailJS send failed:', err);
+  }
+}
+
+/* ---------- CSV / Excel / PDF exports for history ---------- */
+function downloadHistoryCSV(){
+  const rows = [["Date","Payment For","Amount","Reference","Status"]];
+  paymentHistory.forEach(p => rows.push([paidAtToDate(p.paidAt).toLocaleString(), p.metadata?.payment_for, p.amount, p.reference, p.status]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'payment_history.csv'; a.click();
+}
+
+function downloadHistoryExcel(){
+  const wb = XLSX.utils.book_new();
+  const wsData = [["Date","Payment For","Amount","Reference","Status"]];
+  paymentHistory.forEach(p => wsData.push([paidAtToDate(p.paidAt).toLocaleString(), p.metadata?.payment_for, p.amount, p.reference, p.status]));
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+  XLSX.writeFile(wb, "payment_history.xlsx");
+}
+
+function downloadHistoryPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("PTS Payment History", 20, 20);
+  let y = 32;
+  paymentHistory.forEach((p, i) => {
+    const line = `${i+1}. ${p.metadata?.payment_for || ''} - ₦${p.amount} (${paidAtToDate(p.paidAt).toLocaleString()})`;
+    doc.text(line, 20, y);
+    y += 8;
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+  doc.save('payment_history.pdf');
+}
+
+/* ---------- Summary & Chart ---------- */
+function updateSummary(){
+  const total = paymentHistory.filter(p => p.status === 'success').reduce((s,c) => s + Number(c.amount || 0), 0);
+  const dept = paymentHistory.filter(p => (p.metadata?.payment_for || '').toLowerCase().includes('departmental')).reduce((s,c)=> s + Number(c.amount || 0), 0);
+  const year = userProfile.year || 1;
+  const paidForYear = paymentHistory.filter(p => Number(p.metadata?.student_year) === Number(year)).reduce((s,c)=> s + Number(c.amount||0), 0);
   const outstanding = Math.max((totalFeesByYear[year] || 0) - paidForYear, 0);
 
-  document.getElementById("totalPayments").innerText = "₦" + total.toLocaleString();
-  document.getElementById("totalDept").innerText = "₦" + dept.toLocaleString();
-  document.getElementById("outstandingBalance").innerText = "₦" + outstanding.toLocaleString();
-  document.getElementById("currentYearSpan").innerText = year;
+  document.getElementById('totalPayments').innerText = "₦" + total.toLocaleString();
+  document.getElementById('totalDept').innerText = "₦" + dept.toLocaleString();
+  document.getElementById('outstandingBalance').innerText = "₦" + outstanding.toLocaleString();
+  document.getElementById('currentYearSpan').innerText = year;
 
   drawChart();
 }
 
-function drawChart() {
+let chartInstance = null;
+function drawChart(){
   const ctx = document.getElementById('paymentChart').getContext('2d');
-  new Chart(ctx, {
+  const labels = paymentHistory.map(p => p.metadata?.payment_for || 'Unknown');
+  const data = paymentHistory.map(p => Number(p.amount || 0));
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: paymentHistory.map(p => p.metadata.payment_for),
-      datasets: [{
-        label: 'Amount (₦)',
-        data: paymentHistory.map(p => p.amount),
-        backgroundColor: 'rgba(37, 99, 235, 0.6)'
-      }]
-    },
+      labels,
+      datasets: [{ label: 'Amount (₦)', data, backgroundColor: 'rgba(37,99,235,0.6)' }]
+    }
   });
 }
 
-// --------------------------- HELPERS ---------------------------
-function showSection(name) {
-  ["dashboardSection", "paymentSection", "historySection", "profileSection"].forEach(id => {
-    document.getElementById(id).classList.add("hidden");
-  });
-  document.getElementById(name + "Section").classList.remove("hidden");
+/* ---------- Helpers ---------- */
+function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+function showSection(name){
+  ["dashboardSection","paymentSection","historySection","profileSection"].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById(name + 'Section').classList.remove('hidden');
 }
 window.showSection = showSection;
-</script>>
+
+/* ---------- Init: wire buttons that exist on load ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // some initial UI wiring
+  document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('confirmPayBtn').addEventListener('click', () => confirmAndPay());
+});
+
+</script>
 </body>
 </html>
