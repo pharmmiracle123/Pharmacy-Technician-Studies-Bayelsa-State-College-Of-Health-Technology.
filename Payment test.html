@@ -7,6 +7,12 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  (function() {
+    emailjs.init("YOUR_PUBLIC_KEY_HERE");
+  })();
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
@@ -162,13 +168,14 @@
   <div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4"></div>
 
 <script>
-// ===================================================================================
-// ==================         MAIN DASHBOARD SCRIPT                         ==================
-// ===================================================================================
+/* ==========================================================================
+   PTS DASHBOARD SCRIPT — WITH AUTO RECEIPT GENERATION + EMAILJS SUPPORT
+   ========================================================================== */
 
 const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878";
 const PAYSTACK_SPLIT_CODE = "SPL_Ijp4pkn553";
 
+// --------------------------- FEE CONFIGURATION ---------------------------
 const fees = {
   1: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
@@ -177,177 +184,247 @@ const fees = {
 
 const totalFeesByYear = Object.fromEntries(
   Object.entries(fees).map(([year, feeItems]) => [
-    year, Object.values(feeItems).reduce((sum, amount) => sum + amount, 0)
+    year, Object.values(feeItems).reduce((sum, a) => sum + a, 0)
   ])
 );
 
-let paymentHistory = [];
 let currentUser = null;
 let userProfile = {};
+let paymentHistory = [];
 let unsubscribeFromPayments = null;
 
-// --- Main App Initializer with Multi-Step Security Check ---
+// --------------------------- INITIALIZATION ---------------------------
 window.initializeAppLogic = () => {
   const { auth, onAuthStateChanged } = window.firebase;
-
   onAuthStateChanged(auth, user => {
     const spinner = document.getElementById('loadingSpinner');
-    
     if (user) {
-      // STEP 1 PASSED: User is signed in with Firebase.
-      const accessGranted = sessionStorage.getItem('paymentAccessGranted');
-      
-      }
-      
-      // ALL CHECKS PASSED: Load the dashboard.
       currentUser = user;
       document.getElementById('appContainer').classList.remove('hidden');
       spinner.style.display = 'none';
-      
       loadProfile();
       listenForPayments();
+      renderPaymentSection();
       showSection('dashboard');
     } else {
-      // STEP 1 FAILED: User is not signed in at all. Redirect to main login page.
-      console.warn("Security check failed: No user signed in. Redirecting...");
-      window.location.href = 'PTS Login.html'; // Adjust filename if needed
+      window.location.href = 'PTS Login.html';
     }
   });
 };
 
-// --- Corrected Logout Function ---
+// --------------------------- LOGOUT ---------------------------
 function logoutProfile() {
-  // CRITICAL: Clear the access flag so the user must re-enter the password next time.
-  sessionStorage.removeItem('paymentAccessGranted');
-  
   const { auth, signOut } = window.firebase;
-  signOut(auth).catch(error => showNotification(`Logout Error: ${error.message}`, true));
-  // The onAuthStateChanged listener will automatically redirect to the login page.
+  signOut(auth);
 }
 window.logoutProfile = logoutProfile;
 
-// --- Profile Management ---
+// --------------------------- PROFILE ---------------------------
 async function loadProfile() {
-  if (!currentUser) return;
   const { db, doc, getDoc } = window.firebase;
-  const userDocRef = doc(db, "users", currentUser.uid);
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
+  userProfile = snap.exists() ? snap.data() : { email: currentUser.email, year: 1 };
+  updateUIWithProfile(userProfile);
+}
+function updateUIWithProfile(profile) {
+  document.getElementById("userNameDisplay").innerText = profile.name || "No Name";
+  document.getElementById("userEmailDisplay").innerText = profile.email || "";
+}
 
-  const docSnap = await getDoc(userDocRef);
-  if (docSnap.exists()) {
-    userProfile = docSnap.data();
-    updateUIWithProfile(userProfile);
-  } else {
-    // For new users, use email from auth as a default
-    userProfile = { email: currentUser.email };
-    updateUIWithProfile(userProfile);
+// --------------------------- PAYMENT SECTION ---------------------------
+function renderPaymentSection() {
+  const section = document.getElementById("paymentSection");
+  const yearFees = fees[userProfile.year] || fees[1];
+
+  section.innerHTML = `
+    <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
+    <div class="space-y-4">
+      <select id="paymentType" class="border p-2 rounded w-full dark:bg-gray-700">
+        <option value="">Select Fee Type</option>
+        ${Object.entries(yearFees).map(([k, v]) => `<option value="${k}">${k} - ₦${v.toLocaleString()}</option>`).join("")}
+      </select>
+      <button onclick="initiatePayment()" class="bg-blue-700 text-white px-4 py-2 rounded w-full">Proceed to Pay</button>
+    </div>
+  `;
+}
+window.renderPaymentSection = renderPaymentSection;
+
+function initiatePayment() {
+  const paymentFor = document.getElementById('paymentType').value;
+  if (!paymentFor) return alert('Please select a fee type.');
+
+  const amount = fees[userProfile.year]?.[paymentFor];
+  if (!amount) return alert('Invalid fee type.');
+
+  if (confirm(`Confirm payment of ₦${amount.toLocaleString()} for ${paymentFor}?`)) {
+    makePayment(amount, userProfile.email, userProfile.name, paymentFor);
   }
 }
 
-function updateUIWithProfile(profile) {
-    document.getElementById("userNameDisplay").innerText = profile.name || "No Name Set";
-    document.getElementById("userEmailDisplay").innerText = profile.email || "";
+// --------------------------- PAYSTACK INTEGRATION ---------------------------
+function makePayment(amount, email, name, paymentFor) {
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: email,
+    amount: amount * 100,
+    currency: 'NGN',
+    ref: 'PTS_' + Date.now(),
+    split_code: PAYSTACK_SPLIT_CODE,
+    metadata: { payment_for: paymentFor, student_year: userProfile.year },
+    callback: (response) => {
+      savePaymentToFirestore(response, amount, paymentFor);
+      alert('✅ Payment successful! Receipt generated & sent via email.');
+    },
+    onClose: () => alert('Payment cancelled.')
+  });
+  handler.openIframe();
 }
 
-// --- Payment & History (Real-time) ---
+// --------------------------- FIRESTORE SAVE ---------------------------
+async function savePaymentToFirestore(response, amount, paymentFor) {
+  const { db, doc, setDoc } = window.firebase;
+  const payRef = doc(db, "users", currentUser.uid, "payments", response.reference);
+  const data = {
+    reference: response.reference,
+    amount,
+    status: 'success',
+    metadata: { payment_for: paymentFor, student_year: userProfile.year },
+    paidAt: new Date()
+  };
+  await setDoc(payRef, data);
+
+  // Generate and email receipt immediately
+  const paymentData = { ...data, id: response.reference };
+  generateReceiptPDF(paymentData);
+  sendReceiptEmail(paymentData);
+}
+
+// --------------------------- RECEIPT GENERATION ---------------------------
+function generateReceiptPDF(p) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.text("PTS PAYMENT RECEIPT", 70, 20);
+  doc.text(`Name: ${userProfile.name}`, 20, 40);
+  doc.text(`Payment For: ${p.metadata.payment_for}`, 20, 50);
+  doc.text(`Amount: ₦${p.amount.toLocaleString()}`, 20, 60);
+  doc.text(`Ref: ${p.reference}`, 20, 70);
+  doc.text(`Date: ${new Date(p.paidAt).toLocaleString()}`, 20, 80);
+  doc.save(`PTS_Receipt_${p.reference}.pdf`);
+}
+
+// --------------------------- EMAIL RECEIPT (EMAILJS) ---------------------------
+async function sendReceiptEmail(p) {
+  try {
+    await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+      to_name: userProfile.name,
+      to_email: userProfile.email,
+      payment_for: p.metadata.payment_for,
+      amount: "₦" + p.amount.toLocaleString(),
+      reference: p.reference,
+      date: new Date(p.paidAt).toLocaleString(),
+    });
+    console.log("✅ Receipt email sent to " + userProfile.email);
+  } catch (error) {
+    console.error("❌ Failed to send receipt email:", error);
+  }
+}
+
+// --------------------------- PAYMENT HISTORY ---------------------------
 function listenForPayments() {
-  if (unsubscribeFromPayments) unsubscribeFromPayments();
-  if (!currentUser) return;
-
   const { db, collection, onSnapshot, query } = window.firebase;
-  const paymentsColRef = collection(db, "users", currentUser.uid, "payments");
-  const q = query(paymentsColRef); // Can add ordering here later if needed
-
-  unsubscribeFromPayments = onSnapshot(q, (snapshot) => {
-    paymentHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    paymentHistory.sort((a, b) => b.paidAt.toMillis() - a.paidAt.toMillis());
-    
+  const q = query(collection(db, "users", currentUser.uid, "payments"));
+  unsubscribeFromPayments = onSnapshot(q, snapshot => {
+    paymentHistory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    paymentHistory.sort((a, b) => b.paidAt.toDate() - a.paidAt.toDate());
     renderHistory();
     updateSummary();
-    // Chart rendering logic would go here
   });
 }
 
+// --------------------------- HISTORY RENDER ---------------------------
 function renderHistory() {
-  const tbody = document.getElementById("historyTable");
-  const emptyState = document.getElementById("historyEmptyState");
-  const searchQuery = document.getElementById("searchHistory").value.toLowerCase();
-
-  const filtered = paymentHistory.filter(h =>
-    (h.reference || "").toLowerCase().includes(searchQuery) ||
-    (h.metadata.payment_for || "").toLowerCase().includes(searchQuery)
+  const table = document.getElementById("historyTable");
+  const search = document.getElementById("searchHistory").value.toLowerCase();
+  const filtered = paymentHistory.filter(p =>
+    (p.reference || "").toLowerCase().includes(search) ||
+    (p.metadata?.payment_for || "").toLowerCase().includes(search)
   );
 
-  emptyState.classList.toggle('hidden', filtered.length > 0);
-  tbody.innerHTML = filtered.map(h => {
-    let statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 rounded-full">${escapeHtml(h.status)}</span>`;
-    if (h.status === 'success') {
-      statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">Succeeded</span>`;
-    } else if (h.status === 'failed') {
-      statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Failed</span>`;
-    }
-    return `
-      <tr class="border-b dark:border-gray-700">
-        <td class="p-2">${h.paidAt.toDate().toLocaleString()}</td>
-        <td class="p-2">${escapeHtml(h.metadata.payment_for || "N/A")}</td>
-        <td class="p-2">₦${Number(h.amount).toLocaleString()}</td>
-        <td class="p-2">${escapeHtml(h.reference || "-")}</td>
-        <td class="p-2">${statusBadge}</td>
-        <td class="p-2">
-          ${h.status === 'success' ? `<button onclick="viewReceipt('${h.id}')" class="bg-purple-600 text-white px-3 py-1 text-xs rounded">View Receipt</button>` : ''}
-        </td>
-      </tr>`;
-  }).join("");
-}
-window.renderHistory = renderHistory;
-
-// --- Summary & Dashboard Calculations ---
-function updateSummary() {
-  let totalPaid = 0;
-  let deptFees = 0;
-  let paidForCurrentYear = 0;
-  const currentStudentYear = userProfile.year;
-
-  paymentHistory.forEach(h => {
-    if (h.status !== 'success') return;
-    const amount = Number(h.amount) || 0;
-    totalPaid += amount;
-    if ((h.metadata.payment_for || "").toLowerCase().includes("departmental")) deptFees += amount;
-    if (h.metadata.student_year == currentStudentYear) paidForCurrentYear += amount;
-  });
-
-  document.getElementById("totalPayments").innerText = "₦" + totalPaid.toLocaleString();
-  document.getElementById("totalDept").innerText = "₦" + deptFees.toLocaleString();
-
-  if (currentStudentYear && totalFeesByYear[currentStudentYear]) {
-    const outstanding = totalFeesByYear[currentStudentYear] - paidForCurrentYear;
-    document.getElementById("outstandingBalance").innerText = "₦" + (outstanding > 0 ? outstanding.toLocaleString() : '0');
-    document.getElementById("currentYearSpan").innerText = currentStudentYear;
-  } else {
-    document.getElementById("outstandingBalance").innerText = "N/A";
-    document.getElementById("currentYearSpan").innerText = "";
+  if (!filtered.length) {
+    document.getElementById("historyEmptyState").classList.remove("hidden");
+    table.innerHTML = "";
+    return;
   }
+
+  document.getElementById("historyEmptyState").classList.add("hidden");
+  table.innerHTML = filtered.map(p => `
+    <tr class="border-b dark:border-gray-700">
+      <td class="p-2">${new Date(p.paidAt.seconds * 1000).toLocaleString()}</td>
+      <td class="p-2">${p.metadata.payment_for}</td>
+      <td class="p-2">₦${p.amount.toLocaleString()}</td>
+      <td class="p-2">${p.reference}</td>
+      <td class="p-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Success</span></td>
+      <td class="p-2"><button onclick="downloadReceiptPDF('${p.id}')" class="bg-purple-700 text-white px-3 py-1 rounded text-xs">Receipt</button></td>
+    </tr>
+  `).join("");
 }
 
-// --- All other utility functions (makePayment, viewReceipt, export functions, etc.) would follow ---
-// These are unchanged from the previous "Advanced" version and can be copied in.
-// For brevity in this response, only the core corrected logic is shown, but a full implementation
-// would include all the helper functions for UI, exports, and payment handling.
-
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+// --------------------------- DOWNLOAD RECEIPT ---------------------------
+function downloadReceiptPDF(id) {
+  const { jsPDF } = window.jspdf;
+  const p = paymentHistory.find(x => x.id === id);
+  if (!p) return;
+  const doc = new jsPDF();
+  doc.text("PTS PAYMENT RECEIPT", 70, 20);
+  doc.text(`Name: ${userProfile.name}`, 20, 40);
+  doc.text(`Payment For: ${p.metadata.payment_for}`, 20, 50);
+  doc.text(`Amount: ₦${p.amount.toLocaleString()}`, 20, 60);
+  doc.text(`Ref: ${p.reference}`, 20, 70);
+  doc.text(`Date: ${new Date(p.paidAt.seconds * 1000).toLocaleString()}`, 20, 80);
+  doc.save(`PTS_Receipt_${p.reference}.pdf`);
 }
 
-function showSection(sectionName) {
-    // This function hides all main sections and shows the requested one
-    const sections = ['dashboardSection', 'paymentSection',    'historySection', 'profileSection'];
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-    const activeSection = document.getElementById(sectionName + 'Section');
-    if (activeSection) activeSection.classList.remove('hidden');
+// --------------------------- SUMMARY & CHART ---------------------------
+function updateSummary() {
+  const total = paymentHistory.filter(p => p.status === "success").reduce((a, c) => a + c.amount, 0);
+  const dept = paymentHistory.filter(p => p.metadata.payment_for.includes("Departmental")).reduce((a, c) => a + c.amount, 0);
+  const year = userProfile.year;
+  const paidForYear = paymentHistory.filter(p => p.metadata.student_year === year).reduce((a, c) => a + c.amount, 0);
+  const outstanding = Math.max((totalFeesByYear[year] || 0) - paidForYear, 0);
+
+  document.getElementById("totalPayments").innerText = "₦" + total.toLocaleString();
+  document.getElementById("totalDept").innerText = "₦" + dept.toLocaleString();
+  document.getElementById("outstandingBalance").innerText = "₦" + outstanding.toLocaleString();
+  document.getElementById("currentYearSpan").innerText = year;
+
+  drawChart();
+}
+
+function drawChart() {
+  const ctx = document.getElementById('paymentChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: paymentHistory.map(p => p.metadata.payment_for),
+      datasets: [{
+        label: 'Amount (₦)',
+        data: paymentHistory.map(p => p.amount),
+        backgroundColor: 'rgba(37, 99, 235, 0.6)'
+      }]
+    },
+  });
+}
+
+// --------------------------- HELPERS ---------------------------
+function showSection(name) {
+  ["dashboardSection", "paymentSection", "historySection", "profileSection"].forEach(id => {
+    document.getElementById(id).classList.add("hidden");
+  });
+  document.getElementById(name + "Section").classList.remove("hidden");
 }
 window.showSection = showSection;
-</script>
+</script>>
 </body>
 </html>
