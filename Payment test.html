@@ -3,77 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PTS Advanced Payment Dashboard</title>
+  <title>PTS Payment Dashboard — Hosted Checkout</title>
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- EmailJS for sending emails from static site -->
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-  <script>
-    (function(){ 
-      // Replace with your EmailJS public key
-      emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
-    })();
-  </script>
-
+  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-
-  <!-- FIREBASE SDKs (v9 modular) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
-      authDomain: "pts-bscht.firebaseapp.com",
-      projectId: "pts-bscht",
-      storageBucket: "pts-bscht.appspot.com",
-      messagingSenderId: "860500545291",
-      appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
-      measurementId: "G-B9NTEZYFMM"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // expose needed Firebase helpers to the global script below
-    window.firebase = { auth, onAuthStateChanged, signOut, db, doc, setDoc, getDoc, onSnapshot, collection, query };
-    window.addEventListener("load", () => {
-  if (window.initializeAppLogic) {
-    window.initializeAppLogic();
-  } else {
-    console.warn("initializeAppLogic not found yet.");
-  }
-});// start app (the main script defines this)
-  </script>
+  <!-- EmailJS (for sending receipts from client) -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
   <style>
     .receipt-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
     .modal { display: none; }
-    .modal.active { display: flex; align-items: center; justify-content: center; }
+    .modal.active { display:flex; align-items:center; justify-content:center; }
     .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100">
 
-  <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-28 w-28"></div>
-  </div>
+<!-- ============================
+     LOADER
+     ============================ -->
+<div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+  <div class="loader rounded-full border-8 border-t-8 border-gray-200 h-28 w-28"></div>
+</div>
 
-  <div id="appContainer" class="hidden flex">
+<!-- ============================
+     APP LAYOUT
+     ============================ -->
+<div id="app" class="hidden min-h-screen">
+
+  <div class="flex">
+
     <!-- Sidebar -->
     <aside id="sidebar" class="w-72 bg-blue-900 text-white min-h-screen p-6 hidden md:block">
       <div class="flex items-center gap-3 mb-6">
         <img id="logoSmall" src="logo.png" alt="logo" class="w-12 h-12 object-contain bg-white rounded p-1"/>
         <div>
           <h2 class="text-2xl font-bold">PTS Payments</h2>
-          <p id="sidebarUserName" class="text-sm opacity-90"></p>
+          <div id="sidebarUserName" class="text-sm opacity-90"></div>
         </div>
       </div>
 
@@ -83,592 +56,704 @@
           <li><button onclick="showSection('payment')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">💳 Make Payment</button></li>
           <li><button onclick="showSection('history')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">📜 Payment History</button></li>
           <li><button onclick="showSection('profile')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">👤 Student Profile</button></li>
+          <li><button onclick="showSection('settings')" class="w-full text-left px-3 py-2 rounded hover:bg-blue-800">⚙ Settings</button></li>
         </ul>
       </nav>
 
-      <div class="mt-auto pt-8 space-y-3">
+      <div class="mt-8 space-y-3">
         <button onclick="toggleDarkMode()" class="w-full bg-gray-700 text-white py-2 rounded">🌙 Toggle Dark Mode</button>
-        <button onclick="logoutProfile()" class="w-full bg-red-600 text-white py-2 rounded">🚪 Logout</button>
+        <button onclick="signOutUser()" class="w-full bg-red-600 text-white py-2 rounded">🚪 Sign out</button>
       </div>
     </aside>
 
     <!-- Main -->
     <main class="flex-1 p-6">
+
       <header class="flex items-center justify-between bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
         <div class="flex items-center gap-4">
           <img id="logoHeader" src="logo.png" alt="PTS Logo" class="h-12 w-12 object-contain bg-white rounded p-1"/>
           <div>
             <h1 class="text-xl font-bold text-blue-900 dark:text-white">PTS Fees Dashboard</h1>
-            <p class="text-sm text-gray-500">Payments • Receipts • Reports</p>
+            <p class="text-sm text-gray-500 dark:text-gray-300">Payments • Receipts • Reports</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <button id="menuToggle" onclick="toggleSidebar()" class="md:hidden px-3 py-2 bg-blue-700 text-white rounded">☰ Menu</button>
+        <div class="flex items-center gap-4">
           <div class="text-right">
             <div id="userNameDisplay" class="text-sm text-gray-600 dark:text-gray-200">Not signed in</div>
             <div id="userEmailDisplay" class="text-xs text-gray-400"></div>
           </div>
-          <img id="authPhoto" src="" alt="User" class="h-10 w-10 rounded-full ml-3 object-cover hidden"/>
+          <img id="authPhoto" src="" alt="User" class="h-12 w-12 rounded-full object-cover hidden"/>
+          <div id="authButtons" class="ml-4">
+            <button id="googleSignInBtn" class="bg-blue-600 text-white px-3 py-1 rounded">Sign in with Google</button>
+          </div>
         </div>
       </header>
 
-      <section id="notificationSection" class="hidden bg-yellow-100 text-yellow-900 p-3 rounded mb-6"></section>
+      <section id="notification" class="hidden bg-yellow-100 text-yellow-900 p-3 rounded mb-6"></section>
 
       <!-- Dashboard -->
       <section id="dashboardSection" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-            <h3 class="text-sm font-semibold text-gray-500">Total Payments Made</h3>
+            <h3 class="text-sm font-semibold text-gray-500">Total Payments</h3>
             <p id="totalPayments" class="text-2xl font-bold text-blue-700">₦0</p>
           </div>
           <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-            <h3 class="text-sm font-semibold text-gray-500">Outstanding Balance (Year <span id="currentYearSpan"></span>)</h3>
-            <p id="outstandingBalance" class="text-2xl font-bold text-red-600">₦0</p>
+            <h3 class="text-sm font-semibold text-gray-500">Department Fees</h3>
+            <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
           </div>
           <div class="p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
-            <h3 class="text-sm font-semibold text-gray-500">Department Fees Paid</h3>
-            <p id="totalDept" class="text-2xl font-bold text-green-700">₦0</p>
+            <h3 class="text-sm font-semibold text-gray-500">Other Fees</h3>
+            <p id="totalOther" class="text-2xl font-bold text-purple-700">₦0</p>
           </div>
         </div>
 
         <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
           <h3 class="font-bold text-blue-900 dark:text-white mb-3">📊 Payment Overview</h3>
-          <canvas id="paymentChart" height="200"></canvas>
+          <canvas id="paymentChart" height="160"></canvas>
         </div>
       </section>
 
-      <!-- Payment -->
-      <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow">
-        <h2 class="text-lg font-bold mb-4 text-blue-900 dark:text-white">Choose Fee (organized by Year)</h2>
+      <!-- Payment section -->
+      <section id="paymentSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
+        <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">💳 Make a Payment</h2>
 
-        <!-- Fees by Year cards -->
-        <div class="grid md:grid-cols-3 gap-4">
+        <p class="text-sm text-gray-500 mb-4">Choose a year and a fee. You will preview, then be redirected to the hosted Paystack link. After payment Paystack will redirect back here — we'll then create a receipt and email it.</p>
+
+        <!-- Year/fee lists (each fee has its own hosted Paystack link) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
-            <h3 class="font-semibold mb-3">Year 1 Fees</h3>
-            <ul id="year1List" class="space-y-2"></ul>
+            <h3 class="font-semibold mb-3">Year 1</h3>
+            <ul id="year1Fees" class="space-y-2"></ul>
+            <div class="mt-3">
+              <button onclick="previewFeeFromLink(1, 'All Fees', null)" class="w-full bg-blue-700 text-white py-2 rounded">Preview All Year 1</button>
+            </div>
           </div>
+
           <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
-            <h3 class="font-semibold mb-3">Year 2 Fees</h3>
-            <ul id="year2List" class="space-y-2"></ul>
+            <h3 class="font-semibold mb-3">Year 2</h3>
+            <ul id="year2Fees" class="space-y-2"></ul>
+            <div class="mt-3">
+              <button onclick="previewFeeFromLink(2, 'All Fees', null)" class="w-full bg-blue-700 text-white py-2 rounded">Preview All Year 2</button>
+            </div>
           </div>
+
           <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded shadow">
-            <h3 class="font-semibold mb-3">Year 3 Fees</h3>
-            <ul id="year3List" class="space-y-2"></ul>
+            <h3 class="font-semibold mb-3">Year 3</h3>
+            <ul id="year3Fees" class="space-y-2"></ul>
+            <div class="mt-3">
+              <button onclick="previewFeeFromLink(3, 'All Fees', null)" class="w-full bg-blue-700 text-white py-2 rounded">Preview All Year 3</button>
+            </div>
           </div>
         </div>
-
-        <p class="text-sm text-gray-500 mt-4">Click a fee's <em>Pay</em> button to preview and confirm payment.</p>
       </section>
 
       <!-- History -->
       <section id="historySection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
-        <h2 class="text-lg font-bold text-blue-900 dark:text-white mb-4">📜 Payment History</h2>
-
-        <div class="flex flex-wrap gap-3 mb-4">
-          <input id="searchHistory" oninput="renderHistory()" placeholder="🔍 Search by Ref or Fee Type" class="flex-1 border rounded px-3 py-2 dark:bg-gray-700" />
-          <button onclick="downloadHistoryPDF()" class="bg-blue-700 text-white px-4 py-2 rounded">⬇ PDF</button>
-          <button onclick="downloadHistoryExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇ Excel</button>
-          <button onclick="downloadHistoryCSV()" class="bg-yellow-500 text-white px-4 py-2 rounded">⬇ CSV</button>
-        </div>
+        <h2 class="text-lg font-bold text-blue-900 mb-4">📜 Payment History</h2>
 
         <div class="overflow-x-auto">
           <table class="w-full table-auto text-sm">
             <thead class="bg-gray-100 dark:bg-gray-700">
               <tr>
-                <th class="p-2 text-left">Date</th>
-                <th class="p-2 text-left">Fee Type</th>
+                <th class="p-2 text-left">Name</th>
+                <th class="p-2 text-left">Email</th>
+                <th class="p-2 text-left">Year</th>
+                <th class="p-2 text-left">Fee</th>
                 <th class="p-2 text-left">Amount</th>
                 <th class="p-2 text-left">Ref</th>
-                <th class="p-2 text-left">Status</th>
-                <th class="p-2 text-left">Actions</th>
+                <th class="p-2 text-left">Date</th>
               </tr>
             </thead>
             <tbody id="historyTable"></tbody>
           </table>
-          <p id="historyEmptyState" class="text-center py-8 text-gray-500 hidden">No payment history found.</p>
         </div>
       </section>
 
       <!-- Profile -->
       <section id="profileSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
+        <h2 class="text-lg font-bold text-blue-900 mb-4">👤 Profile</h2>
         <div class="flex items-center gap-6">
-          <img id="profilePhotoLarge" class="h-24 w-24 rounded-full object-cover" src="" alt="Profile"/>
+          <img id="profilePhotoLarge" src="" class="h-24 w-24 rounded-full object-cover hidden" alt="profile">
           <div>
-            <h2 id="profileNameLarge" class="text-xl font-bold"></h2>
-            <p id="profileEmailLarge" class="text-sm text-gray-500"></p>
-            <p id="profileYearLarge" class="mt-2"></p>
+            <div id="profileNameLarge" class="text-xl font-bold"></div>
+            <div id="profileEmailLarge" class="text-sm text-gray-500"></div>
+            <div id="profileYearLarge" class="mt-2 text-sm text-gray-500"></div>
           </div>
         </div>
       </section>
 
+      <!-- Settings -->
+      <section id="settingsSection" class="hidden bg-white dark:bg-gray-800 p-6 rounded shadow mt-6">
+        <h2 class="text-lg font-bold text-blue-900 mb-4">⚙ Settings</h2>
+        <p class="text-sm text-gray-500">Placeholders for notification and EmailJS config.</p>
+      </section>
+
     </main>
   </div>
+</div>
 
-  <!-- PAYMENT PREVIEW MODAL -->
-  <div id="paymentPreviewModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative">
-      <button onclick="closePaymentPreview()" class="absolute top-2 right-2 text-gray-500">✖</button>
-      <div class="flex items-center gap-4">
-        <img id="previewPhoto" src="" alt="photo" class="h-16 w-16 rounded-full object-cover"/>
-        <div>
-          <h3 id="previewName" class="text-lg font-bold"></h3>
-          <p id="previewEmail" class="text-sm text-gray-500"></p>
-        </div>
-      </div>
-
-      <hr class="my-4">
+<!-- ============================
+     PREVIEW MODAL
+     ============================ -->
+<div id="previewModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative">
+    <button onclick="closePreview()" class="absolute top-3 right-3 text-gray-500">✖</button>
+    <div class="flex items-center gap-4">
+      <img id="previewPhoto" src="" class="h-16 w-16 rounded-full object-cover" alt="photo">
       <div>
-        <p class="text-sm text-gray-600">Fee</p>
-        <h4 id="previewFeeName" class="text-xl font-semibold"></h4>
-        <p class="text-sm text-gray-600 mt-2">Year: <span id="previewYear"></span></p>
-        <p class="text-2xl font-bold mt-4 text-blue-700" id="previewAmount">₦0</p>
-      </div>
-
-      <div class="mt-6 flex gap-3">
-        <button id="confirmPayBtn" class="flex-1 bg-green-600 text-white py-2 rounded">Pay Now</button>
-        <button onclick="closePaymentPreview()" class="flex-1 bg-gray-500 text-white py-2 rounded">Cancel</button>
+        <div id="previewName" class="text-lg font-bold"></div>
+        <div id="previewEmail" class="text-sm text-gray-500"></div>
       </div>
     </div>
+
+    <hr class="my-4">
+
+    <div>
+      <div class="text-sm text-gray-600">Fee</div>
+      <div id="previewFeeName" class="text-xl font-semibold"></div>
+      <div class="text-sm text-gray-600 mt-1">Year: <span id="previewYear"></span></div>
+      <div id="previewAmount" class="text-2xl font-bold mt-4 text-blue-700">₦0</div>
+    </div>
+
+    <div class="mt-6 flex gap-3">
+      <button id="previewPayBtn" class="flex-1 bg-green-600 text-white py-2 rounded">Proceed to Pay (hosted)</button>
+      <button onclick="closePreview()" class="flex-1 bg-gray-500 text-white py-2 rounded">Cancel</button>
+    </div>
   </div>
+</div>
 
-  <!-- RECEIPT MODAL (viewing receipt in-app) -->
-  <div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
-    <div id="receiptModalContent" class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative"></div>
-  </div>
+<!-- ============================
+     RECEIPT MODAL
+     ============================ -->
+<div id="receiptModal" class="modal fixed inset-0 bg-black bg-opacity-50 p-4">
+  <div id="receiptContent" class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full relative"></div>
+</div>
 
-<script>
-/* ==========================================================================
-   PTS DASHBOARD SCRIPT — polished: auth profile pic/name, fee groups,
-   preview modal, paystack split, Firestore save, jsPDF receipt + EmailJS
-   ========================================================================== */
+<!-- ============================
+  SCRIPTS: Firebase auth + app logic
+  ============================ -->
+<script type="module">
+/* ===========================================
+   CONFIG - Replace the placeholders below:
+   - EMAILJS_USER, EMAILJS_SERVICE, EMAILJS_TEMPLATE
+   - PAYSTACK hosted links are placeholders (you said ok)
+   =========================================== */
 
-/* ---------- CONFIG (replace placeholders) ---------- */
-const PAYSTACK_PUBLIC_KEY = "pk_live_258fa9605c51c7f7a1f5c20e0254ddf80671d878"; // e.g. pk_live_...
-const PAYSTACK_SPLIT_CODE  = "SPL_Ijp4pkn553"; // your split code (already present)
-const EMAILJS_SERVICE_ID   = "YOUR_EMAILJS_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID  = "YOUR_EMAILJS_TEMPLATE_ID";
+// --- EmailJS init (client-side) ---
+emailjs.init("YOUR_EMAILJS_PUBLIC_KEY"); // <-- replace with your EmailJS public key
+const EMAILJS_SERVICE = "YOUR_EMAILJS_SERVICE_ID";      // replace
+const EMAILJS_TEMPLATE = "YOUR_EMAILJS_TEMPLATE_ID";   // replace
 
-/* ---------- Fee definitions (clear separation per year) ---------- */
-const fees = {
+// --- Paystack hosted links (placeholders) ---
+// Each fee has its own hosted Paystack link. Replace with your real links.
+const PAYSTACK_LINKS = {
+  1: {
+    "Course enrollment": "https://paystack.shop/pay/9xhmb4034-",
+    "I.T fee":             "https://paystack.com/pay/pts-year1-it",
+    "Departmental dues":   "https://paystack.com/pay/pts-year1-dept",
+    "Practical fee":       "https://paystack.com/pay/pts-year1-practical",
+    "All Fees":            "https://paystack.com/pay/pts-year1-all"
+  },
+  2: {
+    "Course enrollment": "https://paystack.shop/pay/9xhmb4034-",
+    "I.T fee":             "https://paystack.com/pay/pts-year2-it",
+    "Departmental dues":   "https://paystack.com/pay/pts-year2-dept",
+    "Practical fee":       "https://paystack.com/pay/pts-year2-practical",
+    "All Fees":            "https://paystack.com/pay/pts-year2-all"
+  },
+  3: {
+    "Course enrollment": "https://paystack.shop/pay/9xhmb4034-",
+    "Departmental dues":   "https://paystack.com/pay/pts-year3-dept",
+    "Practical fee":       "https://paystack.com/pay/pts-year3-practical",
+    "Project fee":         "https://paystack.com/pay/pts-year3-project",
+    "All Fees":            "https://paystack.com/pay/pts-year3-all"
+  }
+};
+
+// --- Fee amounts (kept clear and separated) ---
+const FEES = {
   1: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   2: { "Course enrollment": 1000, "I.T fee": 7500, "Departmental dues": 6000, "Practical fee": 4000 },
   3: { "Course enrollment": 1000, "Departmental dues": 6000, "Practical fee": 4000, "Project fee": 15000 }
 };
 
-const totalFeesByYear = Object.fromEntries(
-  Object.entries(fees).map(([year, feeItems]) => [year, Object.values(feeItems).reduce((s,a) => s+a, 0)])
-);
+// --- Firebase (modular v9+) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged,
+  signInWithPopup, GoogleAuthProvider, signOut
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-/* ---------- App state ---------- */
-let currentUser = null;
-let userProfile = { name: null, email: null, photoURL: null, year: 1 };
-let paymentHistory = [];
-let unsubscribeFromPayments = null;
-let currentlyPreviewing = null; // { year, feeName, amount }
-
-/* ---------- Utility helpers ---------- */
-function showNotification(msg, isError=false) {
-  const note = document.getElementById('notificationSection');
-  note.classList.remove('hidden');
-  note.textContent = msg;
-  note.className = `p-3 rounded mb-6 ${isError ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900'}`;
-  setTimeout(()=> note.classList.add('hidden'), 4000);
-}
-
-function toggleDarkMode() {
-  document.documentElement.classList.toggle('dark');
-}
-
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('hidden');
-}
-
-/* ---------- Initialization (called by the firebase module script) ---------- */
-window.initializeAppLogic = () => {
-  const { auth, onAuthStateChanged } = window.firebase;
-  onAuthStateChanged(auth, async (user) => {
-    const spinner = document.getElementById('loadingSpinner');
-    if (user) {
-      currentUser = user;
-      // set basic profile from auth
-      userProfile.name = user.displayName || user.email.split('@')[0];
-      userProfile.email = user.email;
-      userProfile.photoURL = user.photoURL || "";
-      // Try to fetch stored profile (year, name override, photo override) from Firestore
-      try {
-        const { db, doc, getDoc } = window.firebase;
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          userProfile = {
-            name: data.name || userProfile.name,
-            email: data.email || userProfile.email,
-            photoURL: data.photoURL || userProfile.photoURL,
-            year: data.year || userProfile.year
-          };
-        }
-      } catch (e) {
-        console.warn("Could not load user doc:", e);
-      }
-
-      // update UI
-      document.getElementById('appContainer').classList.remove('hidden');
-      spinner.style.display = 'none';
-      updateUIWithProfile(userProfile);
-      renderFeesByYear();
-      listenForPayments();
-      showSection('dashboard');
-    } else {
-      // not signed in — redirect to your login page
-      window.location.href = 'PTS Login.html';
-    }
-  });
+// Paste your Firebase config (you shared earlier) - keep it consistent with your project
+const firebaseConfig = {
+  apiKey: "AIzaSyBzuQuY_9BSGrhQmN2zuH7bgS8nUOBZRnA",
+  authDomain: "pts-bscht.firebaseapp.com",
+  projectId: "pts-bscht",
+  storageBucket: "pts-bscht.appspot.com",
+  messagingSenderId: "860500545291",
+  appId: "1:860500545291:web:60df69992bcaddcb0bdc0e",
+  measurementId: "G-B9NTEZYFMM"
 };
 
-/* ---------- Logout ---------- */
-function logoutProfile(){
-  const { auth, signOut } = window.firebase;
-  signOut(auth);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ============ App state ============ */
+let currentUser = null;          // firebase user
+let profile = { name: "", email: "", photoURL: "", year: 1 };
+let payments = [];               // populated from Firestore (or local fallback)
+let chartInstance = null;
+
+/* ============ Helpers ============ */
+function $(id){ return document.getElementById(id); }
+function show(el){ if(el) el.classList.remove('hidden'); }
+function hide(el){ if(el) el.classList.add('hidden'); }
+function notify(msg, timeout=3500){
+  const n = $('notification'); n.innerText = msg; n.classList.remove('hidden');
+  setTimeout(()=> n.classList.add('hidden'), timeout);
 }
-window.logoutProfile = logoutProfile;
 
-/* ---------- UI Profile update ---------- */
-function updateUIWithProfile(profile){
-  document.getElementById("userNameDisplay").innerText = profile.name || "No Name";
-  document.getElementById("userEmailDisplay").innerText = profile.email || "";
-  document.getElementById("sidebarUserName").innerText = profile.name || "";
-
-  const img = document.getElementById("authPhoto");
-  const imgLarge = document.getElementById("profilePhotoLarge");
-  if (profile.photoURL) {
-    img.src = profile.photoURL; img.classList.remove('hidden');
-    imgLarge.src = profile.photoURL;
-  } else {
-    img.classList.add('hidden');
+/* ============ Authentication (Google) ============ */
+const provider = new GoogleAuthProvider();
+$('googleSignInBtn').addEventListener('click', async () => {
+  try {
+    await signInWithPopup(auth, provider);
+    // onAuthStateChanged will handle UI
+  } catch(err){
+    console.error("Sign in failed", err);
+    alert("Sign-in failed: " + err.message);
   }
-  document.getElementById("profileNameLarge").innerText = profile.name || "";
-  document.getElementById("profileEmailLarge").innerText = profile.email || "";
-  document.getElementById("profileYearLarge").innerText = `Year: ${profile.year || 1}`;
-}
+});
 
-/* ---------- Render fees into three lists (separate and clear) ---------- */
-function renderFeesByYear(){
-  const year1List = document.getElementById('year1List');
-  const year2List = document.getElementById('year2List');
-  const year3List = document.getElementById('year3List');
+window.signOutUser = async function(){
+  await signOut(auth);
+  // clear UI
+  currentUser = null;
+  profile = { name: "", email: "", photoURL: "", year: 1 };
+  renderProfileUI();
+  notify("Signed out");
+};
 
-  const buildList = (container, year) => {
-    const feeObj = fees[year] || {};
-    container.innerHTML = Object.entries(feeObj).map(([k,v]) => `
-      <li class="flex items-center justify-between">
+/* ============ Load UI after auth state changes ============ */
+onAuthStateChanged(auth, async (user) => {
+  const spinner = $('loadingSpinner');
+  if (user) {
+    currentUser = user;
+    // default profile from auth
+    profile.name = user.displayName || user.email.split('@')[0];
+    profile.email = user.email;
+    profile.photoURL = user.photoURL || "";
+    profile.uid = user.uid;
+
+    // try to fetch user's saved profile document (year override)
+    try {
+      const uDoc = await getDoc(doc(db, "users", user.uid));
+      if (uDoc.exists()) {
+        const data = uDoc.data();
+        profile = { ...profile, ...(data || {}) };
+      } else {
+        // create doc with defaults
+        await setDoc(doc(db, "users", user.uid), { name: profile.name, email: profile.email, photoURL: profile.photoURL, year: profile.year });
+      }
+    } catch(err) {
+      console.warn("Could not read user doc:", err);
+    }
+
+    // UI
+    renderProfileUI();
+    renderFeeLists();
+    await attachPaymentsListener();
+    show($('app'));
+    hide(spinner);
+    // hide sign-in button area
+    $('authButtons').style.display = 'none';
+
+    // If the page has a ?reference=... in URL (Paystack redirect after hosted checkout),
+    // attempt to mark payment as completed locally + Firestore (note: server-side verify is recommended).
+    handlePostPayRedirect();
+  } else {
+    // not signed in
+    currentUser = null;
+    profile = { name: "", email: "", photoURL: "", year: 1 };
+    renderProfileUI();
+    // show sign-in control
+    $('authButtons').style.display = '';
+    hide($('app'));
+    hide(spinner);
+  }
+});
+
+/* ============ Populate fee lists (buttons link to hosted Paystack pages) ============ */
+function renderFeeLists(){
+  // year -> container id mapping
+  const map = {1:'year1Fees',2:'year2Fees',3:'year3Fees'};
+  Object.keys(map).forEach(y => {
+    const el = $(map[y]);
+    if (!el) return;
+    el.innerHTML = ""; // clear
+    const year = Number(y);
+    const feeObj = FEES[year] || {};
+    Object.entries(feeObj).forEach(([feeName, amount]) => {
+      // button markup: preview and pay
+      const li = document.createElement('li');
+      li.className = "flex items-center justify-between";
+      li.innerHTML = `
         <div>
-          <div class="font-medium">${k}</div>
-          <div class="text-xs text-gray-500">₦${v.toLocaleString()}</div>
+          <div class="font-medium">${feeName}</div>
+          <div class="text-xs text-gray-500">₦${Number(amount).toLocaleString()}</div>
         </div>
         <div class="flex gap-2">
-          <button class="bg-yellow-500 text-white px-3 py-1 rounded text-sm" onclick="previewFee(${year}, ${JSON.stringify(k)}, ${v})">Preview</button>
-          <button class="bg-blue-700 text-white px-3 py-1 rounded text-sm" onclick="previewFee(${year}, ${JSON.stringify(k)}, ${v})">Pay</button>
+          <button class="px-3 py-1 rounded bg-yellow-500 text-white" data-action="preview">Preview</button>
+          <button class="px-3 py-1 rounded bg-blue-700 text-white" data-action="pay">Pay</button>
         </div>
-      </li>
-    `).join('');
-  };
+      `;
+      // attach handlers
+      li.querySelector('[data-action="preview"]').addEventListener('click', ()=> previewFeeFromLink(year, feeName, amount));
+      li.querySelector('[data-action="pay"]').addEventListener('click', ()=> previewFeeFromLink(year, feeName, amount, true));
+      el.appendChild(li);
+    });
 
-  buildList(year1List, 1);
-  buildList(year2List, 2);
-  buildList(year3List, 3);
-}
-
-/* ---------- Payment Preview modal ---------- */
-function previewFee(year, feeName, amount){
-  currentlyPreviewing = { year, feeName, amount };
-  document.getElementById('previewPhoto').src = userProfile.photoURL || 'logo.png';
-  document.getElementById('previewName').innerText = userProfile.name || userProfile.email;
-  document.getElementById('previewEmail').innerText = userProfile.email || '';
-  document.getElementById('previewFeeName').innerText = feeName;
-  document.getElementById('previewYear').innerText = year;
-  document.getElementById('previewAmount').innerText = `₦${Number(amount).toLocaleString()}`;
-  document.getElementById('paymentPreviewModal').classList.add('active');
-
-  // attach handler to confirm button (replace previous listener)
-  const btn = document.getElementById('confirmPayBtn');
-  btn.onclick = () => confirmAndPay();
-}
-
-function closePaymentPreview(){
-  document.getElementById('paymentPreviewModal').classList.remove('active');
-  currentlyPreviewing = null;
-}
-
-/* ---------- Paystack flow (with split) ---------- */
-async function confirmAndPay() {
-  if (!currentlyPreviewing) return showNotification('Nothing to pay', true);
-  const { feeName, amount, year } = currentlyPreviewing;
-  closePaymentPreview();
-  
-  const ref = 'PTS_' + Date.now(); // unique reference
-  
-  try {
-    // Build Paystack hosted checkout URL
-    const paystackUrl = new URL("https://checkout.paystack.com/");
-    paystackUrl.searchParams.append("amount", Math.round(amount * 100)); // kobo
-    paystackUrl.searchParams.append("email", userProfile.email);
-    paystackUrl.searchParams.append("currency", "NGN");
-    paystackUrl.searchParams.append("reference", ref);
-    paystackUrl.searchParams.append("split_code", PAYSTACK_SPLIT_CODE);
-    paystackUrl.searchParams.append("metadata[payment_for]", feeName);
-    paystackUrl.searchParams.append("metadata[student_year]", year);
-    
-    // Redirect to Paystack hosted payment page
-    window.location.href = paystackUrl.toString();
-  } catch (err) {
-    console.error(err);
-    showNotification('Could not initiate payment', true);
-  }
-}
-/* ---------- Save payment to Firestore ---------- */
-async function savePaymentToFirestore(response, amount, paymentFor, year) {
-  const { db, doc, setDoc } = window.firebase;
-  const payRef = doc(db, "users", currentUser.uid, "payments", response.reference);
-  const data = {
-    reference: response.reference,
-    amount,
-    status: 'success',
-    metadata: { payment_for: paymentFor, student_year: year },
-    paidAt: new Date()
-  };
-  await setDoc(payRef, data);
-}
-
-/* ---------- Helpers to normalize paidAt to Date ---------- */
-function paidAtToDate(paidAt){
-  if (!paidAt) return new Date();
-  // handle Firestore Timestamp-like object
-  if (typeof paidAt.toDate === 'function') return paidAt.toDate();
-  if (paidAt.seconds) return new Date(paidAt.seconds * 1000);
-  if (paidAt instanceof Date) return paidAt;
-  return new Date(paidAt);
-}
-
-/* ---------- PAYMENT HISTORY listener ---------- */
-function listenForPayments(){
-  const { db, collection, onSnapshot, query } = window.firebase;
-  const q = query(collection(db, "users", currentUser.uid, "payments"));
-  unsubscribeFromPayments = onSnapshot(q, snapshot => {
-    paymentHistory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    // ensure amounts are numbers and sort by date
-    paymentHistory.forEach(p => { p.amount = Number(p.amount || 0); });
-    paymentHistory.sort((a,b) => paidAtToDate(b.paidAt) - paidAtToDate(a.paidAt));
-    renderHistory();
-    updateSummary();
+    // Also add single "All Fees" entry for the year
+    const allBtn = document.createElement('div');
+    const total = Object.values(feeObj).reduce((s,v)=>s+v,0);
+    allBtn.className = "mt-3 flex items-center justify-between";
+    allBtn.innerHTML = `
+      <div>
+        <div class="font-medium">All Fees (Year ${year})</div>
+        <div class="text-xs text-gray-500">₦${Number(total).toLocaleString()}</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="px-3 py-1 rounded bg-yellow-500 text-white" data-action="preview-all">Preview</button>
+        <button class="px-3 py-1 rounded bg-blue-700 text-white" data-action="pay-all">Pay</button>
+      </div>
+    `;
+    allBtn.querySelector('[data-action="preview-all"]').addEventListener('click', ()=> previewFeeFromLink(year, 'All Fees', total));
+    allBtn.querySelector('[data-action="pay-all"]').addEventListener('click', ()=> previewFeeFromLink(year, 'All Fees', total, true));
+    el.appendChild(allBtn);
   });
 }
 
-/* ---------- Render history table ---------- */
-function renderHistory(){
-  const table = document.getElementById('historyTable');
-  const search = (document.getElementById('searchHistory').value || '').toLowerCase();
-  const filtered = paymentHistory.filter(p =>
-    (p.reference || '').toLowerCase().includes(search) ||
-    (p.metadata?.payment_for || '').toLowerCase().includes(search)
-  );
+/* ============ Preview modal & redirect logic ============ */
+/**
+ * previewFeeFromLink(year, feeName, amount, autoProceed=false)
+ * - Opens preview modal and sets Pay button to open the hosted link for that fee
+ * - If hosted link not provided in PAYSTACK_LINKS, still allows user to proceed (placeholder)
+ */
+function previewFeeFromLink(year, feeName, amount, autoProceed=false){
+  // fill preview UI
+  $('previewPhoto').src = profile.photoURL || 'logo.png';
+  $('previewName').innerText = profile.name || profile.email || 'Student';
+  $('previewEmail').innerText = profile.email || '';
+  $('previewFeeName').innerText = feeName;
+  $('previewYear').innerText = year;
+  $('previewAmount').innerText = `₦${Number(amount).toLocaleString()}`;
 
-  if (!filtered.length){
-    document.getElementById('historyEmptyState').classList.remove('hidden');
-    table.innerHTML = '';
-    return;
+  // determine the hosted link
+  const link = (PAYSTACK_LINKS[year] && PAYSTACK_LINKS[year][feeName]) || null;
+
+  // prepare a unique reference we can recognize after redirect
+  const reference = 'PTS_' + Date.now() + '_' + Math.floor(Math.random()*9000+1000);
+  // store a pending payment locally so when Paystack redirects back we have details
+  // save minimal payment info to localStorage under pendingPayments
+  const pending = JSON.parse(localStorage.getItem('pts_pending_payments') || '{}');
+  pending[reference] = {
+    reference, year, feeName, amount: Number(amount),
+    userEmail: profile.email, userName: profile.name, createdAt: new Date().toISOString()
+  };
+  localStorage.setItem('pts_pending_payments', JSON.stringify(pending));
+
+  // attach click on previewPayBtn to open the hosted link
+  const btn = $('previewPayBtn');
+  btn.onclick = () => {
+    // Build redirect URL: if we have an explicit hosted paystack link, redirect to it.
+    // We'll append our reference and user email so Paystack (if configured) can include/return them.
+    // Note: Paystack hosted links accept query params on many setups — but if yours doesn't, replace links in PAYSTACK_LINKS with the correct ones containing metadata.
+    let target = link;
+    if (!target) {
+      // fallback to a generic message page; user can replace with actual hosted links later
+      target = `https://paystack.com/pay/pts-generic?reference=${encodeURIComponent(reference)}`;
+    } else {
+      // append query params (safe even if link already has params)
+      const url = new URL(target);
+      url.searchParams.set('reference', reference);
+      if (profile.email) url.searchParams.set('email', profile.email);
+      url.searchParams.set('amount', String(Math.round(Number(amount) * 100))); // kobo - informative
+      target = url.toString();
+    }
+
+    // Open in a new tab (hosted checkout). Many Paystack hosted links redirect back to a URL you configured on Paystack.
+    // We open in a new tab so user returns here; we also notify them to wait for redirect.
+    window.open(target, '_blank');
+
+    // show small notification and close modal — user will complete payment in that new tab
+    notify('Hosted checkout opened in a new tab. After payment, return to this page (the hosted checkout should redirect here).');
+    closePreview();
+    // optionally, if automatic proceed requested, nothing more to do
+  };
+
+  // show the preview modal
+  $('previewModal').classList.add('active');
+
+  if (autoProceed) {
+    // If caller wanted to immediately proceed to pay (skip explicit click), trigger click after a short delay
+    setTimeout(()=> btn.click(), 500);
   }
-  document.getElementById('historyEmptyState').classList.add('hidden');
+}
 
-  table.innerHTML = filtered.map(p => {
-    const date = paidAtToDate(p.paidAt).toLocaleString();
-    return `
-      <tr class="border-b dark:border-gray-700">
-        <td class="p-2">${date}</td>
-        <td class="p-2">${escapeHtml(p.metadata?.payment_for || '-')}</td>
-        <td class="p-2">₦${Number(p.amount).toLocaleString()}</td>
-        <td class="p-2">${escapeHtml(p.reference || '-')}</td>
-        <td class="p-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Succeeded</span></td>
-        <td class="p-2"><button class="bg-purple-700 text-white px-3 py-1 rounded text-xs" onclick="viewReceipt('${p.id}')">Receipt</button></td>
-      </tr>
-    `;
+function closePreview(){
+  $('previewModal').classList.remove('active');
+}
+
+/* ============ After-hosted-checkout handling (client-side best-effort) ============
+   IMPORTANT: For real financial security you MUST verify the transaction server-side using
+   Paystack's verify endpoint with your SECRET KEY. Client-side verification exposes secrets
+   and can be spoofed. This implementation does a client-side optimistic mark when we detect
+   a reference param in the URL and a matching pending payment saved earlier. Replace with a
+   secure server verification for production.
+   ============================================ */
+function handlePostPayRedirect(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const reference = urlParams.get('reference') || urlParams.get('trxref') || urlParams.get('ref') || null;
+  if (!reference) return;
+
+  // look up pending
+  const pending = JSON.parse(localStorage.getItem('pts_pending_payments') || '{}');
+  const p = pending[reference];
+  // If there is a pending record we created earlier, mark it paid and store to Firestore.
+  // If not found — we'll still create a minimal record using query params.
+  (async ()=>{
+    if (p) {
+      // build payment object
+      const paymentRecord = {
+        reference: p.reference,
+        userName: p.userName,
+        userEmail: p.userEmail,
+        year: p.year,
+        feeName: p.feeName,
+        amount: p.amount,
+        status: 'pending_client_confirm', // client-side optimistic
+        paidAt: new Date().toISOString()
+      };
+
+      // Save to Firestore under users/{uid}/payments and also to top-level collection /payments
+      try {
+        if (currentUser && currentUser.uid) {
+          const userPayRef = doc(db, "users", currentUser.uid, "payments", paymentRecord.reference);
+          await setDoc(userPayRef, paymentRecord);
+        }
+        // also store in 'payments' collection for admin
+        try {
+          const topRef = doc(db, "payments", paymentRecord.reference);
+          await setDoc(topRef, paymentRecord);
+        } catch(e) {
+          // ignore
+        }
+      } catch(err){
+        console.warn("Could not save payment to Firestore:", err);
+      }
+
+      // generate receipt PDF (base64) and email it
+      const base64 = await generateReceiptBase64(paymentRecord);
+      await sendReceiptEmail(paymentRecord, base64);
+
+      // cleanup pending entry
+      delete pending[reference];
+      localStorage.setItem('pts_pending_payments', JSON.stringify(pending));
+
+      notify("Payment recorded locally. Receipt emailed (optimistic - please verify server-side).");
+      refreshPaymentsLocal(); // refresh UI
+    } else {
+      // No pending match: create a minimal record from query params (best-effort)
+      const feeName = urlParams.get('metadata[payment_for]') || urlParams.get('payment') || 'Unknown';
+      const amountKobo = Number(urlParams.get('amount') || 0);
+      const amt = amountKobo ? Math.round(amountKobo/100) : 0;
+      const email = urlParams.get('email') || (currentUser ? currentUser.email : '');
+      const paymentRecord = {
+        reference,
+        userName: currentUser?.displayName || email.split('@')[0],
+        userEmail: email,
+        year: urlParams.get('metadata[student_year]') || 'unknown',
+        feeName,
+        amount: amt,
+        status: 'unknown_pending_server_verify',
+        paidAt: new Date().toISOString()
+      };
+
+      // Save to Firestore (best-effort)
+      try {
+        if (currentUser && currentUser.uid) {
+          const userPayRef = doc(db, "users", currentUser.uid, "payments", paymentRecord.reference);
+          await setDoc(userPayRef, paymentRecord);
+        }
+        const topRef = doc(db, "payments", paymentRecord.reference);
+        await setDoc(topRef, paymentRecord);
+      } catch(e) {
+        console.warn("Could not save unmatched payment:", e);
+      }
+
+      const base64 = await generateReceiptBase64(paymentRecord);
+      await sendReceiptEmail(paymentRecord, base64);
+      notify("Received payment redirect. Receipt emailed (please verify on server).");
+      refreshPaymentsLocal();
+    }
+
+    // Remove `reference` param from URL (clean UX)
+    const cur = new URL(window.location.href);
+    cur.searchParams.delete('reference'); cur.searchParams.delete('trxref'); cur.searchParams.delete('ref');
+    window.history.replaceState({}, document.title, cur.pathname + cur.search);
+  })();
+}
+
+/* ============ Firestore listener to show payments (real-time) ============ */
+async function attachPaymentsListener(){
+  if (!currentUser || !currentUser.uid) return;
+  try {
+    const q = query(collection(db, "users", currentUser.uid, "payments"), /* optional orderBy? */);
+    onSnapshot(q, snapshot => {
+      payments = snapshot.docs.map(d => d.data());
+      refreshPaymentsLocal();
+    });
+  } catch(e) {
+    console.warn("attachPaymentsListener failed:", e);
+  }
+}
+
+function refreshPaymentsLocal(){
+  // Merge Firestore payments with localStorage fallback (older entries)
+  const tbl = $('historyTable');
+  const rows = (payments || []).slice().reverse();
+  // add local history fallback from localStorage
+  const localHist = JSON.parse(localStorage.getItem('pts_local_history') || '[]');
+  localHist.forEach(h => rows.push(h));
+
+  tbl.innerHTML = rows.map(p => {
+    return `<tr class="border-b">
+      <td class="p-2">${escapeHtml(p.userName || p.user)}</td>
+      <td class="p-2">${escapeHtml(p.userEmail || '')}</td>
+      <td class="p-2">${escapeHtml(String(p.year || ''))}</td>
+      <td class="p-2">${escapeHtml(String(p.feeName || p.metadata?.payment_for || ''))}</td>
+      <td class="p-2">₦${Number(p.amount || 0).toLocaleString()}</td>
+      <td class="p-2">${escapeHtml(p.reference || '-')}</td>
+      <td class="p-2">${escapeHtml(new Date(p.paidAt || p.createdAt || Date.now()).toLocaleString())}</td>
+    </tr>`;
   }).join('');
+  updateSummary();
+  renderChart();
 }
 
-/* ---------- View receipt in modal ---------- */
-function viewReceipt(id){
-  const p = paymentHistory.find(x => x.id === id);
-  if (!p) return;
-  const modal = document.getElementById('receiptModalContent');
-  modal.innerHTML = `
-    <button onclick="closeReceipt()" class="absolute top-2 right-2 text-gray-500">✖</button>
-    <h2 class="text-xl font-bold mb-3">Payment Receipt</h2>
-    <div class="receipt-mono text-sm space-y-2">
-      <p><b>Name:</b> ${escapeHtml(userProfile.name)}</p>
-      <p><b>Email:</b> ${escapeHtml(userProfile.email)}</p>
-      <p><b>Payment For:</b> ${escapeHtml(p.metadata?.payment_for || '')}</p>
-      <p><b>Amount:</b> ₦${Number(p.amount).toLocaleString()}</p>
-      <p><b>Reference:</b> ${escapeHtml(p.reference)}</p>
-      <p><b>Date:</b> ${paidAtToDate(p.paidAt).toLocaleString()}</p>
-    </div>
-    <div class="mt-4 flex justify-between">
-      <button onclick="downloadReceiptPDF('${id}')" class="bg-blue-700 text-white px-3 py-1 rounded">⬇ PDF</button>
-      <button onclick="closeReceipt()" class="bg-gray-500 text-white px-3 py-1 rounded">Close</button>
-    </div>
-  `;
-  document.getElementById('receiptModal').classList.add('active');
+/* ============ Summary & chart ============ */
+function updateSummary(){
+  const total = payments.reduce((s,p)=> s + Number(p.amount || 0), 0);
+  const dept = payments.filter(p => String(p.feeName || '').toLowerCase().includes('department')).reduce((s,p)=> s + Number(p.amount || 0), 0);
+  const other = total - dept;
+  $('totalPayments').innerText = "₦" + Number(total).toLocaleString();
+  $('totalDept').innerText = "₦" + Number(dept).toLocaleString();
+  $('totalOther').innerText = "₦" + Number(other).toLocaleString();
 }
-function closeReceipt(){ document.getElementById('receiptModal').classList.remove('active'); }
 
-/* ---------- Download receipt PDF for a specific payment ---------- */
-function downloadReceiptPDF(id){
-  const p = paymentHistory.find(x => x.id === id);
-  if (!p) return;
+function renderChart(){
+  const ctx = document.getElementById('paymentChart').getContext('2d');
+  const dept = payments.filter(p => String(p.feeName || '').toLowerCase().includes('department')).reduce((s,p)=> s + Number(p.amount || 0), 0);
+  const other = payments.reduce((s,p)=> s + Number(p.amount || 0), 0) - dept;
+  const data = [dept, other];
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['Departmental','Other'], datasets: [{ data, backgroundColor: ['#34d399','#60a5fa'] }]},
+    options: { responsive:true, maintainAspectRatio:false }
+  });
+}
+
+/* ============ Generate PDF receipt (base64) ============ */
+async function generateReceiptBase64(payment){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(14);
-  doc.text("PTS PAYMENT RECEIPT", 20, 20);
-  doc.setFontSize(10);
-  doc.text(`Name: ${userProfile.name}`, 20, 36);
-  doc.text(`Email: ${userProfile.email}`, 20, 44);
-  doc.text(`Payment For: ${p.metadata?.payment_for || ''}`, 20, 52);
-  doc.text(`Amount: ₦${Number(p.amount).toLocaleString()}`, 20, 60);
-  doc.text(`Reference: ${p.reference}`, 20, 68);
-  doc.text(`Date: ${paidAtToDate(p.paidAt).toLocaleString()}`, 20, 76);
-  doc.save(`PTS_Receipt_${p.reference}.pdf`);
-}
-
-/* ---------- generate base64 PDF (for emailing as attachment) ---------- */
-async function generateReceiptBase64(p){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(14);
-  doc.text("PTS PAYMENT RECEIPT", 20, 20);
-  doc.setFontSize(10);
-  doc.text(`Name: ${userProfile.name}`, 20, 36);
-  doc.text(`Email: ${userProfile.email}`, 20, 44);
-  doc.text(`Payment For: ${p.metadata?.payment_for || ''}`, 20, 52);
-  doc.text(`Amount: ₦${Number(p.amount).toLocaleString()}`, 20, 60);
-  doc.text(`Reference: ${p.reference}`, 20, 68);
-  doc.text(`Date: ${paidAtToDate(p.paidAt).toLocaleString()}`, 20, 76);
-
-  // returns base64 without data URI prefix
+  doc.text("PTS PAYMENT RECEIPT", 20, 30);
+  doc.setFontSize(11);
+  doc.text(`Name: ${payment.userName || ''}`, 20, 46);
+  doc.text(`Email: ${payment.userEmail || ''}`, 20, 56);
+  doc.text(`Year: ${payment.year || ''}`, 20, 66);
+  doc.text(`Payment For: ${payment.feeName || ''}`, 20, 76);
+  doc.text(`Amount: ₦${Number(payment.amount || 0).toLocaleString()}`, 20, 86);
+  doc.text(`Reference: ${payment.reference || ''}`, 20, 96);
+  doc.text(`Date: ${new Date(payment.paidAt || new Date()).toLocaleString()}`, 20, 106);
+  // return base64 (no prefix)
   const datauri = doc.output('datauristring');
   return datauri.split(',')[1];
 }
 
-/* ---------- download base64 PDF ---------- */
-function downloadReceiptBase64(reference, base64){
-  const link = document.createElement('a');
-  link.href = "data:application/pdf;base64," + base64;
-  link.download = `PTS_Receipt_${reference}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
-/* ---------- Send receipt via EmailJS with attachment ---------- */
-async function sendReceiptEmailWithAttachment(p, pdfBase64){
-  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID) {
-    console.warn('EmailJS service/template not set — skip sending email.');
+/* ============ Send receipt email via EmailJS ============
+   Note: EmailJS templates must be set up to accept variables:
+   - to_name, to_email, fee, amount, reference, date, attachment (base64)
+*/
+async function sendReceiptEmail(payment, base64pdf){
+  if (!EMAILJS_SERVICE || !EMAILJS_TEMPLATE) {
+    console.warn("EmailJS service/template not configured - skipping email send.");
     return;
   }
   try {
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_name: userProfile.name,
-      to_email: userProfile.email,
-      payment_for: p.metadata?.payment_for || '',
-      amount: "₦" + Number(p.amount).toLocaleString(),
-      reference: p.reference,
-      date: paidAtToDate(p.paidAt).toLocaleString(),
-      attachment: pdfBase64 // EmailJS supports base64 attachments if template allows
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_name: payment.userName || profile.name,
+      to_email: payment.userEmail || profile.email,
+      fee: payment.feeName || '',
+      amount: "₦" + Number(payment.amount || 0).toLocaleString(),
+      reference: payment.reference || '',
+      date: new Date(payment.paidAt || new Date()).toLocaleString(),
+      attachment: base64pdf // many EmailJS templates accept base64 attachment variables if configured
     });
-    console.log('Email sent to', userProfile.email);
+    console.log("Receipt email sent to", payment.userEmail);
   } catch (err) {
-    console.error('EmailJS send failed:', err);
+    console.warn("EmailJS send error:", err);
   }
 }
 
-/* ---------- CSV / Excel / PDF exports for history ---------- */
-function downloadHistoryCSV(){
-  const rows = [["Date","Payment For","Amount","Reference","Status"]];
-  paymentHistory.forEach(p => rows.push([paidAtToDate(p.paidAt).toLocaleString(), p.metadata?.payment_for, p.amount, p.reference, p.status]));
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type: 'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'payment_history.csv'; a.click();
+/* ============ UI helpers ============ */
+function renderProfileUI(){
+  $('userNameDisplay').innerText = profile.name || "Not signed in";
+  $('userEmailDisplay').innerText = profile.email || "";
+  $('sidebarUserName').innerText = profile.name || "";
+  if (profile.photoURL) {
+    $('authPhoto').src = profile.photoURL; $('authPhoto').classList.remove('hidden');
+    $('profilePhotoLarge').src = profile.photoURL; $('profilePhotoLarge').classList.remove('hidden');
+  } else {
+    $('authPhoto').classList.add('hidden');
+    $('profilePhotoLarge').classList.add('hidden');
+  }
+  $('profileNameLarge').innerText = profile.name || "";
+  $('profileEmailLarge').innerText = profile.email || "";
+  $('profileYearLarge').innerText = "Year: " + (profile.year || 1);
 }
 
-function downloadHistoryExcel(){
-  const wb = XLSX.utils.book_new();
-  const wsData = [["Date","Payment For","Amount","Reference","Status"]];
-  paymentHistory.forEach(p => wsData.push([paidAtToDate(p.paidAt).toLocaleString(), p.metadata?.payment_for, p.amount, p.reference, p.status]));
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  XLSX.utils.book_append_sheet(wb, ws, "Payments");
-  XLSX.writeFile(wb, "payment_history.xlsx");
-}
-
-function downloadHistoryPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.text("PTS Payment History", 20, 20);
-  let y = 32;
-  paymentHistory.forEach((p, i) => {
-    const line = `${i+1}. ${p.metadata?.payment_for || ''} - ₦${p.amount} (${paidAtToDate(p.paidAt).toLocaleString()})`;
-    doc.text(line, 20, y);
-    y += 8;
-    if (y > 270) { doc.addPage(); y = 20; }
-  });
-  doc.save('payment_history.pdf');
-}
-
-/* ---------- Summary & Chart ---------- */
-function updateSummary(){
-  const total = paymentHistory.filter(p => p.status === 'success').reduce((s,c) => s + Number(c.amount || 0), 0);
-  const dept = paymentHistory.filter(p => (p.metadata?.payment_for || '').toLowerCase().includes('departmental')).reduce((s,c)=> s + Number(c.amount || 0), 0);
-  const year = userProfile.year || 1;
-  const paidForYear = paymentHistory.filter(p => Number(p.metadata?.student_year) === Number(year)).reduce((s,c)=> s + Number(c.amount||0), 0);
-  const outstanding = Math.max((totalFeesByYear[year] || 0) - paidForYear, 0);
-
-  document.getElementById('totalPayments').innerText = "₦" + total.toLocaleString();
-  document.getElementById('totalDept').innerText = "₦" + dept.toLocaleString();
-  document.getElementById('outstandingBalance').innerText = "₦" + outstanding.toLocaleString();
-  document.getElementById('currentYearSpan').innerText = year;
-
-  drawChart();
-}
-
-let chartInstance = null;
-function drawChart(){
-  const ctx = document.getElementById('paymentChart').getContext('2d');
-  const labels = paymentHistory.map(p => p.metadata?.payment_for || 'Unknown');
-  const data = paymentHistory.map(p => Number(p.amount || 0));
-  if (chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ label: 'Amount (₦)', data, backgroundColor: 'rgba(37,99,235,0.6)' }]
-    }
-  });
-}
-
-/* ---------- Helpers ---------- */
+/* ============ Misc helpers ============ */
 function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
-function showSection(name){
-  ["dashboardSection","paymentSection","historySection","profileSection"].forEach(id => document.getElementById(id).classList.add('hidden'));
-  document.getElementById(name + 'Section').classList.remove('hidden');
-}
-window.showSection = showSection;
 
-/* ---------- Init: wire buttons that exist on load ---------- */
+/* ============ Init on page load ============ */
 document.addEventListener('DOMContentLoaded', () => {
-  // some initial UI wiring
-  document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
-  document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
-  document.getElementById('confirmPayBtn').addEventListener('click', () => confirmAndPay());
-});
+  // hide loader after short delay (auth handler will also hide when ready)
+  setTimeout(()=> { const spinner = $('loadingSpinner'); if (spinner) spinner.style.display='none'; }, 700);
 
+  // wire navigation for small screens (header buttons already inline)
+  // Display payment section when clicking menu in sidebar etc.
+  // By default show dashboard
+  showSection('dashboard');
+
+  // When user clicks preview modal outside click or escape -> close
+  window.addEventListener('click', (e)=>{
+    const pm = $('previewModal');
+    if (pm && pm.classList.contains('active') && e.target === pm) closePreview();
+  });
+
+  // If user lands with reference param (returned after hosted checkout)
+  // handlePostPayRedirect will run after onAuthStateChanged detects user; call it here too in case user is not signed in.
+  setTimeout(()=> handlePostPayRedirect(), 800);
+});
 </script>
 </body>
 </html>
